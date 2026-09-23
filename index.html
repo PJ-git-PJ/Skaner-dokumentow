@@ -587,6 +587,7 @@
       <button type="button" class="cat-btn" data-category="Karta PJB" aria-pressed="false">Karta PJB</button>
       <button type="button" class="cat-btn" data-category="Karta M2M" aria-pressed="false">Karta M2M</button>
     </div>
+    <p class="crop-hint" style="margin-top:-8px; margin-bottom:14px;">Przytrzymaj przycisk, aby zmienić jego nazwę.</p>
     <button type="button" class="primary-btn" id="generateBtn">Generuj PDF i zapisz</button>
     <p class="status" id="statusMsg"></p>
     <button type="button" class="primary-btn" id="previewPdfBtn" style="display:none; margin-top:10px;">Otwórz podgląd PDF</button>
@@ -665,8 +666,64 @@
   const categoryBtns = document.querySelectorAll('.cat-btn');
   let selectedCategory = null;
 
+  // ---------- niestandardowe nazwy przyciskow kategorii (zapamietane lokalnie w tej przegladarce) ----------
+  const CAT_LABELS_KEY = 'skanerCategoryLabels';
+
+  function saveCategoryLabels() {
+    try {
+      const labels = Array.from(categoryBtns).map(b => b.dataset.category);
+      localStorage.setItem(CAT_LABELS_KEY, JSON.stringify(labels));
+    } catch (e) { /* localStorage niedostepny - po prostu nie zapamietujemy */ }
+  }
+
+  function loadCategoryLabels() {
+    try {
+      const raw = localStorage.getItem(CAT_LABELS_KEY);
+      if (!raw) return;
+      const labels = JSON.parse(raw);
+      if (Array.isArray(labels)) {
+        categoryBtns.forEach((b, i) => {
+          if (labels[i]) { b.textContent = labels[i]; b.dataset.category = labels[i]; }
+        });
+      }
+    } catch (e) { /* zignoruj uszkodzony zapis */ }
+  }
+  loadCategoryLabels();
+
+  function renameCategoryBtn(btn) {
+    const current = btn.dataset.category;
+    const next = window.prompt('Nowa nazwa tego przycisku:', current);
+    if (next === null) return;
+    const trimmed = next.trim();
+    if (!trimmed || trimmed === current) return;
+    btn.textContent = trimmed;
+    btn.dataset.category = trimmed;
+    if (selectedCategory === current) selectedCategory = trimmed;
+    saveCategoryLabels();
+  }
+
+  const LONG_PRESS_MS = 550;
   categoryBtns.forEach(btn => {
+    let pressTimer = null;
+    let longPressFired = false;
+
+    const startPress = () => {
+      longPressFired = false;
+      pressTimer = setTimeout(() => {
+        longPressFired = true;
+        if (navigator.vibrate) navigator.vibrate(15);
+        renameCategoryBtn(btn);
+      }, LONG_PRESS_MS);
+    };
+    const cancelPress = () => clearTimeout(pressTimer);
+
+    btn.addEventListener('pointerdown', startPress);
+    btn.addEventListener('pointerup', cancelPress);
+    btn.addEventListener('pointerleave', cancelPress);
+    btn.addEventListener('pointercancel', cancelPress);
+
     btn.addEventListener('click', () => {
+      if (longPressFired) { longPressFired = false; return; }
       const wasActive = btn.getAttribute('aria-pressed') === 'true';
       categoryBtns.forEach(b => b.setAttribute('aria-pressed', 'false'));
       selectedCategory = wasActive ? null : btn.dataset.category;
