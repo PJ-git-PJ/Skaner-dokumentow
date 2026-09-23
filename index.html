@@ -605,6 +605,30 @@
 (function () {
   "use strict";
 
+  // ---------- obsługa gestu/przycisku "wstecz" ----------
+  // Bez tego pojedyncza strona nie ma własnej historii, więc gest cofania od razu
+  // zamyka appkę. Utrzymujemy w historii przeglądarki jeden "bufor" - cofnięcie
+  // konsumuje go i wraca do poprzedniego EKRANU w appce (kadrowanie/zdjęcie), a nie
+  // wychodzi z niej. Dopiero na samym ekranie startowym (brak wcześniejszych kroków)
+  // kolejne cofnięcie działa normalnie i zamyka/cofa stronę.
+  let currentStep = 'capture';
+  function markStep(name) { currentStep = name; }
+  function armBackGesture() {
+    try { history.pushState({ appBuffer: true }, '', location.href); } catch (e) { /* ignoruj */ }
+  }
+  armBackGesture();
+  window.addEventListener('popstate', () => {
+    if (currentStep === 'optimize') {
+      showCropStep(true);
+      armBackGesture();
+    } else if (currentStep === 'crop') {
+      goToCaptureStep(false);
+      armBackGesture();
+    }
+    // na ekranie startowym ('capture') nic nie robimy - pozwalamy, żeby kolejne
+    // cofnięcie zadziałało normalnie (zamknięcie appki / wyjście)
+  });
+
   const fileInput = document.getElementById('fileInput');
   const captureZone = document.getElementById('captureZone');
   const captureCardTitle = document.getElementById('captureCardTitle');
@@ -795,6 +819,7 @@
   }
 
   function goToCaptureStep(clearForm) {
+    markStep('capture');
     fileInput.value = '';
     sourceImage = null;
     uncroppedImage = null;
@@ -837,6 +862,7 @@
   const MIN_SIZE = 0.12;
 
   function showCropStep(keepExistingCrop) {
+    markStep('crop');
     previewCard.style.display = 'none';
     formCard.style.display = 'none';
     actionCard.style.display = 'none';
@@ -1146,6 +1172,7 @@
   });
 
   function proceedToOptimize() {
+    markStep('optimize');
     document.getElementById('captureCard').style.display = 'none';
     previewCard.style.display = '';
     formCard.style.display = '';
