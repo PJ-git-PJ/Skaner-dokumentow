@@ -1,0 +1,1516 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icon-192.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icon-192.svg">
+<meta name="theme-color" content="#1A73E8">
+<title>Skaner dokumentów</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: light;
+    --paper: #F1F3F6;
+    --paper-raised: #FFFFFF;
+    --card: #FFFFFF;
+    --ink: #202124;
+    --ink-soft: #5F6368;
+    --ink-faint: #9AA0A6;
+    --rule: #DADCE0;
+    --stamp: #1A73E8;
+    --stamp-dark: #185ABC;
+    --stamp-ink: #FFFFFF;
+    --ok: #1E8E3E;
+    --ok-ink: #FFFFFF;
+    --accent-yellow: #F9AB00;
+    --danger: #D93025;
+    --shadow: rgba(32, 33, 36, 0.16);
+    --focus: #1A73E8;
+
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  :root:not([data-theme="light"]) {
+    @media (prefers-color-scheme: dark) {
+      color-scheme: dark;
+      --paper: #202124;
+      --paper-raised: #28292C;
+      --card: #2D2E30;
+      --ink: #E8EAED;
+      --ink-soft: #BDC1C6;
+      --ink-faint: #80868B;
+      --rule: #3C4043;
+      --stamp: #8AB4F8;
+      --stamp-dark: #669DF6;
+      --stamp-ink: #202124;
+      --ok: #81C995;
+      --ok-ink: #202124;
+      --accent-yellow: #FDD663;
+      --danger: #F28B82;
+      --shadow: rgba(0, 0, 0, 0.5);
+      --focus: #8AB4F8;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --paper: #202124;
+    --paper-raised: #28292C;
+    --card: #2D2E30;
+    --ink: #E8EAED;
+    --ink-soft: #BDC1C6;
+    --ink-faint: #80868B;
+    --rule: #3C4043;
+    --stamp: #8AB4F8;
+    --stamp-dark: #669DF6;
+    --stamp-ink: #202124;
+    --ok: #81C995;
+    --ok-ink: #202124;
+    --accent-yellow: #FDD663;
+    --danger: #F28B82;
+    --shadow: rgba(0, 0, 0, 0.5);
+    --focus: #8AB4F8;
+  }
+
+  html, body { height: 100%; }
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    background-image: radial-gradient(circle at 1px 1px, var(--rule) 1px, transparent 0);
+    background-size: 22px 22px;
+    color: var(--ink);
+    font-family: "Manrope", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100%;
+  }
+
+  .wrap {
+    max-width: 460px;
+    margin: 0 auto;
+    padding: 20px 18px calc(40px + env(safe-area-inset-bottom, 0px));
+  }
+
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: env(safe-area-inset-top, 0px) 0 0;
+    margin-bottom: 22px;
+  }
+  header .brand { font-family: "Space Mono", monospace; font-weight: 700; font-size: 15px; letter-spacing: 0.02em; }
+  header .brand span { color: var(--stamp); }
+  header .step-indicator { font-family: "Space Mono", monospace; font-size: 12px; color: var(--ink-faint); }
+
+  h1 { font-size: 26px; line-height: 1.15; margin: 0 0 6px; font-weight: 800; letter-spacing: -0.01em; }
+  .sub { color: var(--ink-soft); font-size: 14.5px; line-height: 1.5; margin: 0 0 24px; max-width: 40ch; }
+
+  .card {
+    background: var(--card);
+    border-radius: 3px;
+    box-shadow: 0 1px 0 var(--rule), 0 10px 24px -16px var(--shadow);
+    border: 1px solid var(--rule);
+    padding: 18px;
+    margin-bottom: 16px;
+  }
+
+  .card-title {
+    font-family: "Space Mono", monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.03em;
+    color: var(--ink-faint);
+    margin: 0 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+
+  /* --- capture --- */
+  .capture-zone {
+    display: block;
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+    font-family: inherit;
+    color: inherit;
+    border: 1.5px dashed var(--stamp);
+    border-radius: 14px;
+    padding: 30px 16px;
+    text-align: center;
+    background: var(--paper-raised);
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .capture-zone:active { background: var(--rule); }
+  .capture-zone:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .capture-zone .icon { width: 46px; height: 46px; margin: 0 auto 12px; color: var(--ink-soft); }
+  .capture-zone .cta { font-weight: 700; font-size: 15.5px; margin-bottom: 4px; }
+  .capture-zone .hint { font-size: 13px; color: var(--ink-faint); }
+
+  #fileInput {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* --- crop --- */
+  .crop-shell {
+    position: relative;
+    border-radius: 2px;
+    overflow: hidden;
+    background: #000;
+    line-height: 0;
+    touch-action: none;
+    user-select: none;
+  }
+  #cropCanvas { display: block; width: 100%; height: auto; }
+  .crop-box {
+    position: absolute;
+    border: 2px solid var(--accent-yellow);
+    box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);
+    touch-action: none;
+    cursor: move;
+  }
+  .crop-handle {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    background: var(--accent-yellow);
+    border: 4px solid var(--card);
+    border-radius: 50%;
+    box-shadow: 0 1px 4px var(--shadow);
+    touch-action: none;
+  }
+  .crop-handle[data-corner="tl"] { top: 0; left: 0; transform: translate(-50%, -50%); cursor: nwse-resize; }
+  .crop-handle[data-corner="tr"] { top: 0; right: 0; transform: translate(50%, -50%); cursor: nesw-resize; }
+  .crop-handle[data-corner="bl"] { bottom: 0; left: 0; transform: translate(-50%, 50%); cursor: nesw-resize; }
+  .crop-handle[data-corner="br"] { bottom: 0; right: 0; transform: translate(50%, 50%); cursor: nwse-resize; }
+  .crop-hint { font-size: 12.5px; color: var(--ink-faint); margin: 10px 0 0; text-align: center; }
+
+  .preview-shell {
+    position: relative;
+    border-radius: 2px;
+    overflow: hidden;
+    background: #000;
+    line-height: 0;
+  }
+  .preview-shell::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.15);
+    pointer-events: none;
+  }
+  #previewCanvas { display: block; width: 100%; height: auto; }
+
+  .filter-row { display: flex; gap: 8px; margin-top: 12px; }
+
+  .category-row { display: flex; gap: 6px; margin-bottom: 14px; }
+  .cat-btn {
+    flex: 1;
+    padding: 10px 3px;
+    border-radius: 10px;
+    border: 1px solid var(--rule);
+    background: var(--paper-raised);
+    color: var(--ink-soft);
+    font-family: "Manrope", sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: center;
+    cursor: pointer;
+  }
+  .cat-btn[aria-pressed="true"] { background: var(--stamp); color: var(--stamp-ink); border-color: var(--stamp); }
+  .filter-btn {
+    flex: 1;
+    padding: 9px 6px;
+    border-radius: 10px;
+    border: 1px solid var(--rule);
+    background: var(--paper-raised);
+    color: var(--ink-soft);
+    font-family: "Manrope", sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .filter-btn[aria-pressed="true"] { background: var(--stamp); color: var(--stamp-ink); border-color: var(--stamp); }
+
+  .slider-row { margin-top: 14px; }
+  .slider-row label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+  }
+  .slider-row label span { font-family: "Space Mono", monospace; color: var(--ink-faint); font-weight: 400; }
+  input[type="range"] {
+    width: 100%;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--rule);
+    accent-color: var(--stamp);
+    cursor: pointer;
+  }
+
+  .retake {
+    margin-top: 10px;
+    width: 100%;
+    padding: 10px;
+    background: transparent;
+    border: none;
+    color: var(--ink-faint);
+    font-size: 13px;
+    font-family: "Manrope", sans-serif;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+  }
+
+  /* --- form --- */
+  label { display: block; font-size: 12.5px; font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; margin-top: 16px; }
+  label:first-of-type { margin-top: 0; }
+
+  input[type="text"], input[type="date"], input[type="time"], textarea {
+    width: 100%;
+    background: var(--paper-raised);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    padding: 11px 12px;
+    font-family: "Manrope", sans-serif;
+    font-size: 15px;
+    color: var(--ink);
+  }
+  input[type="text"]:focus, input[type="date"]:focus, input[type="time"]:focus, textarea:focus { outline: 2px solid var(--focus); outline-offset: 1px; }
+  textarea { resize: vertical; min-height: 60px; }
+
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; padding-top: 4px; }
+  .toggle-row .label-text { font-size: 13.5px; color: var(--ink-soft); font-weight: 600; margin: 0; }
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 42px;
+    height: 24px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+  .switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+  .switch .track { position: absolute; inset: 0; background: var(--rule); border-radius: 999px; transition: background .15s ease; pointer-events: none; }
+  .switch .track::after {
+    content: "";
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 18px; height: 18px;
+    background: var(--card);
+    border-radius: 50%;
+    transition: transform .15s ease;
+    box-shadow: 0 1px 2px var(--shadow);
+  }
+  .switch input:checked + .track { background: var(--focus); }
+  .switch input:checked + .track::after { transform: translateX(18px); }
+  .switch input:focus-visible + .track { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  .filename-stub {
+    margin-top: 16px;
+    border-top: 1px dashed var(--rule);
+    padding-top: 12px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .filename-stub .fx-label { font-size: 11px; color: var(--ink-faint); font-family: "Space Mono", monospace; }
+  .filename-stub .fx-name { font-family: "Space Mono", monospace; font-size: 13.5px; font-weight: 700; word-break: break-all; }
+
+  .primary-btn {
+    width: 100%;
+    padding: 15px;
+    border-radius: 14px;
+    border: none;
+    background: var(--stamp);
+    color: var(--stamp-ink);
+    font-family: "Manrope", sans-serif;
+    font-weight: 800;
+    font-size: 15.5px;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: background .12s ease, transform .06s ease;
+  }
+  .primary-btn:active { transform: scale(0.99); background: var(--stamp-dark); }
+  .primary-btn:disabled { background: var(--rule); color: var(--ink-faint); cursor: not-allowed; }
+  .primary-btn.is-done { background: var(--stamp); color: var(--stamp-ink); }
+  .primary-btn.is-done:active { background: var(--ok); opacity: 0.85; }
+
+  .secondary-btn {
+    display: block;
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+    font-family: "Manrope", sans-serif;
+    font-weight: 700;
+    font-size: 14.5px;
+    padding: 13px;
+    margin-top: 14px;
+    border-radius: 14px;
+    border: 1.5px solid var(--stamp);
+    background: transparent;
+    color: var(--stamp);
+    cursor: pointer;
+  }
+  .secondary-btn:active { background: var(--rule); }
+
+  .split-row { display: flex; gap: 10px; margin-top: 12px; }
+  .split-row .primary-btn, .split-row .secondary-btn { margin-top: 0; flex: 1; }
+
+  .carousel {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .carousel-arrow {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: var(--stamp);
+    color: var(--stamp-ink);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .carousel-arrow:disabled { opacity: 0.3; cursor: default; }
+  .carousel-view {
+    flex: 1;
+    position: relative;
+    border-radius: 2px;
+    overflow: hidden;
+    background: #000;
+    line-height: 0;
+  }
+  .carousel-view img { width: 100%; height: 120px; object-fit: cover; display: block; }
+  .carousel-label {
+    position: absolute;
+    bottom: 6px; left: 6px;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    font-family: "Space Mono", monospace;
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 999px;
+  }
+  .carousel-del {
+    position: absolute;
+    top: 6px; right: 6px;
+    width: 38px; height: 38px;
+    border: none;
+    border-radius: 50%;
+    background: var(--danger);
+    color: #fff;
+    font-size: 21px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    box-shadow: 0 1px 4px var(--shadow);
+  }
+
+  .status { margin-top: 12px; font-size: 13px; text-align: center; min-height: 18px; color: var(--ink-soft); }
+  .status.err { color: var(--danger); }
+  .status.ok { color: var(--ok); }
+
+  .note {
+    font-size: 12.5px;
+    color: var(--ink-faint);
+    line-height: 1.5;
+    padding: 14px 16px;
+    border-radius: 3px;
+    background: var(--paper-raised);
+    border: 1px solid var(--rule);
+  }
+  .note b { color: var(--ink-soft); }
+
+  canvas { max-width: 100%; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">SKANER<span>·</span>DOK</div>
+    <div class="step-indicator" id="stepIndicator">KROK 1/3</div>
+  </header>
+
+  <h1>Zeskanuj dokument</h1>
+  <p class="sub">Zrób zdjęcie, wykadruj, popraw czytelność i zapisz jako PDF z nazwą wg daty.</p>
+
+  <!-- CAPTURE + CROP (jeden krok) -->
+  <div class="card" id="captureCard">
+    <p class="card-title" id="captureCardTitle">ZDJĘCIE</p>
+
+    <div id="captureSection">
+      <button type="button" class="capture-zone" id="captureZone">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+          <path d="M4 8.5C4 7.67 4.67 7 5.5 7H7.8L8.6 5.4C8.83 4.94 9.3 4.65 9.82 4.65H14.18C14.7 4.65 15.17 4.94 15.4 5.4L16.2 7H18.5C19.33 7 20 7.67 20 8.5V17.5C20 18.33 19.33 19 18.5 19H5.5C4.67 19 4 18.33 4 17.5V8.5Z"/>
+          <circle cx="12" cy="13" r="3.4"/>
+        </svg>
+        <div class="cta">Zrób zdjęcie dokumentu</div>
+        <div class="hint">Otworzy aparat telefonu</div>
+      </button>
+      <input type="file" id="fileInput" accept="image/*" capture="environment">
+    </div>
+
+    <div id="cropSection" style="display:none;">
+      <div class="crop-shell" id="cropShell">
+        <canvas id="cropCanvas"></canvas>
+        <div class="crop-box" id="cropBox">
+          <div class="crop-handle" data-corner="tl"></div>
+          <div class="crop-handle" data-corner="tr"></div>
+          <div class="crop-handle" data-corner="bl"></div>
+          <div class="crop-handle" data-corner="br"></div>
+        </div>
+      </div>
+      <p class="crop-hint" id="cropHint">Przeciągnij rogi, aby dopasować kadr, albo przesuń całą ramkę.</p>
+      <div class="split-row">
+        <button type="button" class="primary-btn" id="cropApplyBtn">Przytnij i przejdź dalej</button>
+        <button type="button" class="secondary-btn" id="cropRetakeBtn">Zrób ponownie</button>
+      </div>
+      <div class="split-row">
+        <button type="button" class="primary-btn" id="autoDetectBtn">Wykryj krawędzie automatycznie</button>
+        <button type="button" class="secondary-btn" id="cropSkipBtn">Pomiń kadrowanie</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PREVIEW -->
+  <div class="card" id="previewCard" style="display:none;">
+    <p class="card-title">OPTYMALIZACJA</p>
+
+    <div class="carousel" id="pagesCarousel">
+      <button type="button" class="carousel-arrow" id="carouselPrev" aria-label="Poprzednia strona">‹</button>
+      <div class="carousel-view">
+        <img id="carouselImg" alt="Podgląd zapisanej strony">
+        <span class="carousel-label" id="carouselLabel">Strona 1 z 1</span>
+        <button type="button" class="carousel-del" id="carouselDelBtn" aria-label="Usuń tę stronę">×</button>
+      </div>
+      <button type="button" class="carousel-arrow" id="carouselNext" aria-label="Następna strona">›</button>
+    </div>
+
+    <div class="preview-shell">
+      <canvas id="previewCanvas"></canvas>
+    </div>
+    <div class="filter-row">
+      <button type="button" class="filter-btn" data-filter="original" aria-pressed="false">Oryginał</button>
+      <button type="button" class="filter-btn" data-filter="bw" aria-pressed="true">Skan Cz-B</button>
+      <button type="button" class="filter-btn" data-filter="gray" aria-pressed="false">Skala szarości</button>
+    </div>
+    <div class="slider-row">
+      <label for="contrastSlider"><span id="contrastLabelText">Czułość progu</span> <span id="contrastValue">0</span></label>
+      <input type="range" id="contrastSlider" min="-80" max="80" value="0" step="1">
+    </div>
+
+    <div class="split-row">
+      <button type="button" class="secondary-btn" id="backToCropBtn">Cofnij (popraw kadr)</button>
+      <button type="button" class="secondary-btn" id="retakeBtn">Zrób zdjęcie ponownie</button>
+    </div>
+    <button type="button" class="primary-btn" id="addPageBtn" style="margin-top:14px;">+ Dodaj stronę i zeskanuj kolejną</button>
+  </div>
+
+  <!-- FORM -->
+  <div class="card" id="formCard" style="display:none;">
+    <p class="card-title">OPIS DOKUMENTU</p>
+
+    <label for="nazwaInput">Nazwa</label>
+    <input type="text" id="nazwaInput" placeholder="np. Paragon Biedronka" maxlength="80">
+
+    <label for="opisInput">Opis (opcjonalnie)</label>
+    <textarea id="opisInput" placeholder="np. Zakupy spożywcze, do rozliczenia"></textarea>
+
+    <div class="toggle-row">
+      <p class="label-text">Dodaj godzinę do nazwy pliku</p>
+      <label class="switch">
+        <input type="checkbox" id="timeToggle" checked>
+        <span class="track"></span>
+      </label>
+    </div>
+
+    <div class="toggle-row">
+      <p class="label-text">Ustaw datę/godzinę ręcznie</p>
+      <label class="switch">
+        <input type="checkbox" id="manualDateToggle">
+        <span class="track"></span>
+      </label>
+    </div>
+
+    <div id="manualDateTimeRow" style="display:none; gap:10px;">
+      <div style="flex:1;">
+        <label for="manualDateInput">Data</label>
+        <input type="date" id="manualDateInput">
+      </div>
+      <div style="flex:1;">
+        <label for="manualTimeInput">Godzina</label>
+        <input type="time" id="manualTimeInput">
+      </div>
+    </div>
+
+    <div class="filename-stub">
+      <span class="fx-label">NAZWA PLIKU →</span>
+      <span class="fx-name" id="filenamePreview">—</span>
+    </div>
+  </div>
+
+  <!-- ACTION -->
+  <div id="actionCard" style="display:none;">
+    <div class="category-row" id="categoryRow">
+      <button type="button" class="cat-btn" data-category="Karta PJ" aria-pressed="false">Karta PJ</button>
+      <button type="button" class="cat-btn" data-category="Cash PJ" aria-pressed="false">Cash PJ</button>
+      <button type="button" class="cat-btn" data-category="Karta PJB" aria-pressed="false">Karta PJB</button>
+      <button type="button" class="cat-btn" data-category="Karta M2M" aria-pressed="false">Karta M2M</button>
+    </div>
+    <button type="button" class="primary-btn" id="generateBtn">Generuj PDF i zapisz</button>
+    <p class="status" id="statusMsg"></p>
+    <button type="button" class="primary-btn" id="previewPdfBtn" style="display:none; margin-top:10px;">Otwórz podgląd PDF</button>
+    <p class="crop-hint" id="pagesNote" style="display:none;"></p>
+    <div id="pdfPreviewWrap" style="display:none; margin-top:12px;">
+      <canvas id="pdfPreviewCanvas" style="width:100%; height:auto; display:block; border:1px solid var(--rule); border-radius:2px; background:#fff;"></canvas>
+    </div>
+  </div>
+
+  <p class="note" id="introNote"><b>Jak to działa:</b> zdjęcie zostaje przetworzone lokalnie w przeglądarce (kadrowanie, kontrast, skala szarości), złożone w PDF i zapisane na telefonie. Wysyłka do Google Drive / OneDrive to kolejny etap.</p>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  const fileInput = document.getElementById('fileInput');
+  const captureZone = document.getElementById('captureZone');
+  const captureCardTitle = document.getElementById('captureCardTitle');
+  const captureSection = document.getElementById('captureSection');
+  const cropSection = document.getElementById('cropSection');
+  const cropShell = document.getElementById('cropShell');
+  const cropCanvas = document.getElementById('cropCanvas');
+  const cropCtx = cropCanvas.getContext('2d');
+  const cropBox = document.getElementById('cropBox');
+  const cropApplyBtn = document.getElementById('cropApplyBtn');
+  const cropSkipBtn = document.getElementById('cropSkipBtn');
+  const cropRetakeBtn = document.getElementById('cropRetakeBtn');
+  const autoDetectBtn = document.getElementById('autoDetectBtn');
+  const cropHint = document.getElementById('cropHint');
+  const contrastSlider = document.getElementById('contrastSlider');
+  const contrastValue = document.getElementById('contrastValue');
+  const previewCard = document.getElementById('previewCard');
+  const formCard = document.getElementById('formCard');
+  const actionCard = document.getElementById('actionCard');
+  const previewCanvas = document.getElementById('previewCanvas');
+  const ctx = previewCanvas.getContext('2d');
+  const retakeBtn = document.getElementById('retakeBtn');
+  const backToCropBtn = document.getElementById('backToCropBtn');
+  const filterBtns = document.querySelectorAll('.filter-btn');
+  const nazwaInput = document.getElementById('nazwaInput');
+  const opisInput = document.getElementById('opisInput');
+  const timeToggle = document.getElementById('timeToggle');
+  const manualDateToggle = document.getElementById('manualDateToggle');
+  const manualDateTimeRow = document.getElementById('manualDateTimeRow');
+  const manualDateInput = document.getElementById('manualDateInput');
+  const manualTimeInput = document.getElementById('manualTimeInput');
+  const filenamePreview = document.getElementById('filenamePreview');
+  const generateBtn = document.getElementById('generateBtn');
+  const categoryBtns = document.querySelectorAll('.cat-btn');
+  let selectedCategory = null;
+
+  categoryBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const wasActive = btn.getAttribute('aria-pressed') === 'true';
+      categoryBtns.forEach(b => b.setAttribute('aria-pressed', 'false'));
+      selectedCategory = wasActive ? null : btn.dataset.category;
+      if (selectedCategory) btn.setAttribute('aria-pressed', 'true');
+    });
+  });
+  const statusMsg = document.getElementById('statusMsg');
+  const previewPdfBtn = document.getElementById('previewPdfBtn');
+  const pdfPreviewWrap = document.getElementById('pdfPreviewWrap');
+  const pdfPreviewCanvas = document.getElementById('pdfPreviewCanvas');
+  const pagesCarousel = document.getElementById('pagesCarousel');
+  const carouselPrev = document.getElementById('carouselPrev');
+  const carouselNext = document.getElementById('carouselNext');
+  const carouselImg = document.getElementById('carouselImg');
+  const carouselLabel = document.getElementById('carouselLabel');
+  const carouselDelBtn = document.getElementById('carouselDelBtn');
+  const addPageBtn = document.getElementById('addPageBtn');
+  const pagesNote = document.getElementById('pagesNote');
+  const contrastLabelText = document.getElementById('contrastLabelText');
+  let lastPdfUrl = null;
+  let pages = []; // strony dodane przed bieżącą: { dataUrl, width, height }
+  let carouselIndex = 0;
+
+  previewPdfBtn.addEventListener('click', () => {
+    pdfPreviewWrap.style.display = pdfPreviewWrap.style.display === 'none' ? '' : 'none';
+    if (pdfPreviewWrap.style.display !== 'none') {
+      pdfPreviewWrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  });
+  const stepIndicator = document.getElementById('stepIndicator');
+  const introNote = document.getElementById('introNote');
+
+  let sourceImage = null;    // HTMLImageElement — aktualny obraz (po ew. kadrowaniu)
+  let uncroppedImage = null; // obraz sprzed kadrowania - potrzebny do przycisku "Cofnij"
+  let currentFilter = 'bw';
+
+  captureZone.addEventListener('click', () => {
+    fileInput.value = '';
+    fileInput.click();
+  });
+
+  // ---------- zapis pliku: działa zarówno w artefakcie Claude, jak i jako samodzielna PWA ----------
+  async function saveFile(filename, blob) {
+    // W artefakcie Claude: użyj natywnej funkcji zapisu (pyta o zgodę, integruje się z systemem)
+    if (window.claude && typeof window.claude.use === 'function') {
+      try {
+        const downloadsApi = await window.claude.use('downloads');
+        const result = await downloadsApi.save({ filename, data: blob });
+        if (result && (result.status === 'saved' || result.status === 'delivered')) return true;
+      } catch (e) { /* przejdź do standardowego pobierania */ }
+    }
+    // Poza Claude (zwykła strona / zainstalowana PWA): standardowe pobieranie przeglądarki
+    try {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // ---------- date / filename ----------
+  function pad(n) { return String(n).padStart(2, '0'); }
+
+  function buildFilename() {
+    const now = new Date(); // strefa czasowa telefonu, automatycznie
+    const manualDateValid = manualDateToggle.checked && /^\d{4}-\d{2}-\d{2}$/.test(manualDateInput.value);
+    const useManual = manualDateValid;
+
+    const datePart = useManual
+      ? manualDateInput.value // input[type=date] daje już format yyyy-MM-dd
+      : `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
+    let timePart = '';
+    if (timeToggle.checked) {
+      const manualTimeMatch = useManual && /^(\d{1,2}):(\d{2})/.exec(manualTimeInput.value);
+      if (manualTimeMatch) {
+        timePart = ` ${pad(manualTimeMatch[1])}-${pad(manualTimeMatch[2])}`;
+      } else {
+        timePart = ` ${pad(now.getHours())}-${pad(now.getMinutes())}`;
+      }
+    }
+
+    const rawName = nazwaInput.value.trim();
+    const safeName = rawName.replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim();
+    const namePart = safeName.length ? safeName : 'Dokument';
+    return `${datePart}${timePart} ${namePart}.pdf`;
+  }
+
+  function refreshFilenamePreview() { filenamePreview.textContent = buildFilename(); }
+
+  function prefillManualDateTime() {
+    const now = new Date();
+    if (!manualDateInput.value) {
+      manualDateInput.value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    }
+    if (!manualTimeInput.value) {
+      manualTimeInput.value = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    }
+  }
+
+  manualDateToggle.addEventListener('change', () => {
+    if (manualDateToggle.checked) {
+      prefillManualDateTime();
+      manualDateTimeRow.style.display = 'flex';
+    } else {
+      manualDateTimeRow.style.display = 'none';
+    }
+    refreshFilenamePreview();
+  });
+  manualDateInput.addEventListener('input', refreshFilenamePreview);
+  manualDateInput.addEventListener('change', refreshFilenamePreview);
+  manualTimeInput.addEventListener('input', refreshFilenamePreview);
+  manualTimeInput.addEventListener('change', refreshFilenamePreview);
+
+  nazwaInput.addEventListener('input', refreshFilenamePreview);
+  timeToggle.addEventListener('change', refreshFilenamePreview);
+
+  // ---------- capture ----------
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        sourceImage = img;
+        uncroppedImage = img;
+        showCropStep();
+      };
+      img.onerror = () => showStatus('Nie udało się wczytać zdjęcia. Spróbuj ponownie.', 'err');
+      img.src = ev.target.result;
+    };
+    reader.onerror = () => showStatus('Nie udało się odczytać pliku.', 'err');
+    reader.readAsDataURL(file);
+  });
+
+  function resetGenerateBtn() {
+    generateBtn.textContent = 'Generuj PDF i zapisz';
+    generateBtn.classList.remove('is-done');
+    generateBtn.dataset.mode = 'generate';
+    generateBtn.disabled = false;
+  }
+
+  function goToCaptureStep(clearForm) {
+    fileInput.value = '';
+    sourceImage = null;
+    uncroppedImage = null;
+    document.getElementById('captureCard').style.display = '';
+    cropSection.style.display = 'none';
+    captureSection.style.display = '';
+    captureCardTitle.textContent = 'ZDJĘCIE';
+    previewCard.style.display = 'none';
+    formCard.style.display = 'none';
+    actionCard.style.display = 'none';
+    stepIndicator.textContent = 'KROK 1/3';
+    previewPdfBtn.style.display = 'none';
+    pdfPreviewWrap.style.display = 'none';
+    statusMsg.textContent = '';
+    statusMsg.className = 'status';
+    if (lastPdfUrl) { URL.revokeObjectURL(lastPdfUrl); lastPdfUrl = null; }
+    if (clearForm) {
+      nazwaInput.value = '';
+      opisInput.value = '';
+      manualDateToggle.checked = false;
+      manualDateInput.value = '';
+      manualTimeInput.value = '';
+      manualDateTimeRow.style.display = 'none';
+      pages = [];
+      updateCarousel();
+      pagesNote.style.display = 'none';
+      selectedCategory = null;
+      categoryBtns.forEach(b => b.setAttribute('aria-pressed', 'false'));
+    }
+    resetGenerateBtn();
+    document.getElementById('captureCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  retakeBtn.addEventListener('click', () => goToCaptureStep(false));
+  cropRetakeBtn.addEventListener('click', () => goToCaptureStep(false));
+
+  // ---------- crop step ----------
+  const CROP_MAX_W = 1600;
+  let crop = { left: 0.04, top: 0.04, right: 0.96, bottom: 0.96 };
+  const MIN_SIZE = 0.12;
+
+  function showCropStep(keepExistingCrop) {
+    previewCard.style.display = 'none';
+    formCard.style.display = 'none';
+    actionCard.style.display = 'none';
+    introNote.style.display = 'none';
+    captureSection.style.display = 'none';
+    cropSection.style.display = '';
+    captureCardTitle.textContent = 'KADROWANIE';
+    stepIndicator.textContent = pages.length > 0 ? `KROK 1/3 · STRONA ${pages.length + 1} · KADROWANIE` : 'KROK 1/3 · KADROWANIE';
+
+    const scale = Math.min(1, CROP_MAX_W / uncroppedImage.naturalWidth);
+    cropCanvas.width = Math.round(uncroppedImage.naturalWidth * scale);
+    cropCanvas.height = Math.round(uncroppedImage.naturalHeight * scale);
+    cropCtx.drawImage(uncroppedImage, 0, 0, cropCanvas.width, cropCanvas.height);
+
+    if (keepExistingCrop) {
+      cropHint.textContent = 'Popraw kadr i zatwierdź ponownie.';
+      updateCropBoxStyle();
+    } else {
+      runAutoDetect();
+    }
+    document.getElementById('captureCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function runAutoDetect() {
+    const detected = estimateAutoCrop(cropCanvas);
+    if (detected) {
+      crop = detected;
+      cropHint.textContent = 'Wykryto krawędzie dokumentu automatycznie — w razie potrzeby popraw ręcznie.';
+    } else {
+      crop = { left: 0.04, top: 0.04, right: 0.96, bottom: 0.96 };
+      cropHint.textContent = 'Nie udało się wykryć krawędzi automatycznie — dopasuj kadr ręcznie.';
+    }
+    updateCropBoxStyle();
+  }
+
+  autoDetectBtn.addEventListener('click', runAutoDetect);
+
+  // Szacuje ramkę dokumentu dwiema metodami i wybiera lepszy wynik:
+  // A) różnica koloru względem ramki brzegowej (dobre dla jednolitego tła)
+  // B) jasność + największa spójna "plama" (dobre, gdy dokument jest jasny na ciemnym,
+  //    nierównym tle - np. odbicia w lustrze, cienie, faktura blatu)
+  // Dla zdjęć "kadr w kadr" (dokument wypełnia cały obraz) zwraca null.
+  function estimateAutoCrop(sourceCanvas) {
+    const SW = 260; // szerokość roboczej miniatury - kompromis dokładność/szybkość
+    const scale = SW / sourceCanvas.width;
+    const SH = Math.max(1, Math.round(sourceCanvas.height * scale));
+
+    const tmp = document.createElement('canvas');
+    tmp.width = SW; tmp.height = SH;
+    const tctx = tmp.getContext('2d');
+    tctx.drawImage(sourceCanvas, 0, 0, SW, SH);
+    const data = tctx.getImageData(0, 0, SW, SH).data;
+
+    const at = (x, y) => {
+      const i = (y * SW + x) * 4;
+      return [data[i], data[i + 1], data[i + 2]];
+    };
+
+    const gray = new Float32Array(SW * SH);
+    for (let y = 0; y < SH; y++) {
+      for (let x = 0; x < SW; x++) {
+        const [r, g, b] = at(x, y);
+        gray[y * SW + x] = 0.299 * r + 0.587 * g + 0.114 * b;
+      }
+    }
+
+    const toFrac = (box) => {
+      let fLeft = box.left / SW, fTop = box.top / SH, fRight = (box.right + 1) / SW, fBottom = (box.bottom + 1) / SH;
+      const padX = (fRight - fLeft) * 0.03;
+      const padY = (fBottom - fTop) * 0.03;
+      fLeft = Math.max(0, fLeft - padX);
+      fTop = Math.max(0, fTop - padY);
+      fRight = Math.min(1, fRight + padX);
+      fBottom = Math.min(1, fBottom + padY);
+      return { left: fLeft, top: fTop, right: fRight, bottom: fBottom };
+    };
+
+    // ---------- METODA A: różnica względem koloru ramki brzegowej ----------
+    const detectByBorderDiff = () => {
+      const band = Math.max(3, Math.round(Math.min(SW, SH) * 0.05));
+      let br = 0, bg = 0, bb = 0, n = 0;
+      const sampleBand = (x, y) => { const [r, g, b] = at(x, y); br += r; bg += g; bb += b; n++; };
+      for (let x = 0; x < SW; x += 2) {
+        for (let y = 0; y < band; y++) sampleBand(x, y);
+        for (let y = SH - band; y < SH; y++) sampleBand(x, y);
+      }
+      for (let y = band; y < SH - band; y += 2) {
+        for (let x = 0; x < band; x++) sampleBand(x, y);
+        for (let x = SW - band; x < SW; x++) sampleBand(x, y);
+      }
+      br /= n; bg /= n; bb /= n;
+
+      const diffMap = new Float32Array(SW * SH);
+      for (let y = 0; y < SH; y++) {
+        for (let x = 0; x < SW; x++) {
+          const [r, g, b] = at(x, y);
+          diffMap[y * SW + x] = Math.max(Math.abs(r - br), Math.abs(g - bg), Math.abs(b - bb));
+        }
+      }
+      const smooth = (arr) => arr.map((v, i) => (arr[Math.max(0, i - 1)] + v + arr[Math.min(arr.length - 1, i + 1)]) / 3);
+
+      const tryThreshold = (THRESH) => {
+        const rowSum = new Array(SH).fill(0);
+        const colSum = new Array(SW).fill(0);
+        for (let y = 0; y < SH; y++) {
+          for (let x = 0; x < SW; x++) {
+            if (diffMap[y * SW + x] > THRESH) { rowSum[y]++; colSum[x]++; }
+          }
+        }
+        const rowSmooth = smooth(rowSum);
+        const colSmooth = smooth(colSum);
+        const maxRow = Math.max(...rowSmooth);
+        const maxCol = Math.max(...colSmooth);
+        if (maxRow < SW * 0.04 || maxCol < SH * 0.04) return null;
+        const rowT = maxRow * 0.14, colT = maxCol * 0.14;
+        let top = 0, bottom = SH - 1, left = 0, right = SW - 1;
+        while (top < SH && rowSmooth[top] < rowT) top++;
+        while (bottom > 0 && rowSmooth[bottom] < rowT) bottom--;
+        while (left < SW && colSmooth[left] < colT) left++;
+        while (right > 0 && colSmooth[right] < colT) right--;
+        if (top >= bottom || left >= right) return null;
+        const area = ((right - left) / SW) * ((bottom - top) / SH);
+        if (area < 0.06 || area > 0.97) return null;
+        return { left, top, right, bottom, area, score: area > 0.9 ? 0.3 : 0.55 };
+      };
+
+      for (const THRESH of [28, 38, 50, 65]) {
+        const res = tryThreshold(THRESH);
+        if (res) return res;
+      }
+      return null;
+    };
+
+    // ---------- METODA B: jasność + największa spójna plama (Otsu + flood fill) ----------
+    const detectByBrightBlob = () => {
+      const hist = new Array(256).fill(0);
+      for (let i = 0; i < gray.length; i++) hist[Math.min(255, gray[i] | 0)]++;
+      const total = gray.length;
+      let sum = 0; for (let i = 0; i < 256; i++) sum += i * hist[i];
+      let sumB = 0, wB = 0, varMax = 0, otsu = 127;
+      for (let t = 0; t < 256; t++) {
+        wB += hist[t]; if (wB === 0) continue;
+        const wF = total - wB; if (wF === 0) break;
+        sumB += t * hist[t];
+        const mB = sumB / wB, mF = (sum - sumB) / wF;
+        const between = wB * wF * (mB - mF) * (mB - mF);
+        if (between > varMax) { varMax = between; otsu = t; }
+      }
+
+      const largestComponent = (mask) => {
+        const visited = new Uint8Array(SW * SH);
+        const stack = new Int32Array(SW * SH);
+        let best = null;
+        for (let start = 0; start < SW * SH; start++) {
+          if (!mask[start] || visited[start]) continue;
+          let sp = 0;
+          stack[sp++] = start; visited[start] = 1;
+          let minX = SW, maxX = 0, minY = SH, maxY = 0, count = 0;
+          while (sp > 0) {
+            const cur = stack[--sp];
+            const cx = cur % SW, cy = (cur / SW) | 0;
+            count++;
+            if (cx < minX) minX = cx; if (cx > maxX) maxX = cx;
+            if (cy < minY) minY = cy; if (cy > maxY) maxY = cy;
+            if (cx > 0) { const nb = cur - 1; if (mask[nb] && !visited[nb]) { visited[nb] = 1; stack[sp++] = nb; } }
+            if (cx < SW - 1) { const nb = cur + 1; if (mask[nb] && !visited[nb]) { visited[nb] = 1; stack[sp++] = nb; } }
+            if (cy > 0) { const nb = cur - SW; if (mask[nb] && !visited[nb]) { visited[nb] = 1; stack[sp++] = nb; } }
+            if (cy < SH - 1) { const nb = cur + SW; if (mask[nb] && !visited[nb]) { visited[nb] = 1; stack[sp++] = nb; } }
+          }
+          if (!best || count > best.count) best = { minX, maxX, minY, maxY, count };
+        }
+        return best;
+      };
+
+      const evalPolarity = (brighterIsDoc) => {
+        const mask = new Uint8Array(SW * SH);
+        for (let i = 0; i < gray.length; i++) {
+          mask[i] = brighterIsDoc ? (gray[i] > otsu ? 1 : 0) : (gray[i] < otsu ? 1 : 0);
+        }
+        const comp = largestComponent(mask);
+        if (!comp) return null;
+        const bboxW = comp.maxX - comp.minX + 1, bboxH = comp.maxY - comp.minY + 1;
+        const bboxArea = bboxW * bboxH;
+        const fillRatio = comp.count / bboxArea;
+        const areaFrac = bboxArea / (SW * SH);
+        const touchesAllEdges = comp.minX <= 1 && comp.maxX >= SW - 2 && comp.minY <= 1 && comp.maxY >= SH - 2;
+        if (touchesAllEdges || fillRatio < 0.45 || areaFrac < 0.05 || areaFrac > 0.95) return null;
+        return { left: comp.minX, top: comp.minY, right: comp.maxX, bottom: comp.maxY, area: areaFrac, score: fillRatio };
+      };
+
+      const bright = evalPolarity(true);
+      const dark = evalPolarity(false);
+      if (bright && dark) return bright.score >= dark.score ? bright : dark;
+      return bright || dark || null;
+    };
+
+    const a = detectByBorderDiff();
+    const b = detectByBrightBlob();
+
+    let winner = null;
+    if (a && b) winner = b.score >= a.score ? b : a; // metoda B (spójna plama) zwykle pewniejsza przy podobnym wyniku
+    else winner = b || a;
+
+    if (!winner) return null;
+    return toFrac(winner);
+  }
+
+  function updateCropBoxStyle() {
+    cropBox.style.left = (crop.left * 100) + '%';
+    cropBox.style.top = (crop.top * 100) + '%';
+    cropBox.style.width = ((crop.right - crop.left) * 100) + '%';
+    cropBox.style.height = ((crop.bottom - crop.top) * 100) + '%';
+  }
+
+  function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+  function pointFromEvent(e) {
+    const rect = cropShell.getBoundingClientRect();
+    return {
+      x: clamp((e.clientX - rect.left) / rect.width, 0, 1),
+      y: clamp((e.clientY - rect.top) / rect.height, 0, 1)
+    };
+  }
+
+  // corner-resize handles
+  let activeCorner = null;
+  document.querySelectorAll('.crop-handle').forEach(handle => {
+    handle.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      activeCorner = handle.dataset.corner;
+      handle.setPointerCapture(e.pointerId);
+    });
+    handle.addEventListener('pointermove', (e) => {
+      if (!activeCorner) return;
+      const p = pointFromEvent(e);
+      if (activeCorner === 'tl') {
+        crop.left = clamp(p.x, 0, crop.right - MIN_SIZE);
+        crop.top = clamp(p.y, 0, crop.bottom - MIN_SIZE);
+      } else if (activeCorner === 'tr') {
+        crop.right = clamp(p.x, crop.left + MIN_SIZE, 1);
+        crop.top = clamp(p.y, 0, crop.bottom - MIN_SIZE);
+      } else if (activeCorner === 'bl') {
+        crop.left = clamp(p.x, 0, crop.right - MIN_SIZE);
+        crop.bottom = clamp(p.y, crop.top + MIN_SIZE, 1);
+      } else if (activeCorner === 'br') {
+        crop.right = clamp(p.x, crop.left + MIN_SIZE, 1);
+        crop.bottom = clamp(p.y, crop.top + MIN_SIZE, 1);
+      }
+      updateCropBoxStyle();
+    });
+    handle.addEventListener('pointerup', () => { activeCorner = null; });
+    handle.addEventListener('pointercancel', () => { activeCorner = null; });
+  });
+
+  // move whole box
+  let moving = false;
+  let moveStart = null;
+  let cropStart = null;
+  cropBox.addEventListener('pointerdown', (e) => {
+    if (e.target.classList.contains('crop-handle')) return;
+    e.preventDefault();
+    moving = true;
+    moveStart = pointFromEvent(e);
+    cropStart = { ...crop };
+    cropBox.setPointerCapture(e.pointerId);
+  });
+  cropBox.addEventListener('pointermove', (e) => {
+    if (!moving) return;
+    const p = pointFromEvent(e);
+    const dx = p.x - moveStart.x;
+    const dy = p.y - moveStart.y;
+    const w = cropStart.right - cropStart.left;
+    const h = cropStart.bottom - cropStart.top;
+    let left = clamp(cropStart.left + dx, 0, 1 - w);
+    let top = clamp(cropStart.top + dy, 0, 1 - h);
+    crop = { left, top, right: left + w, bottom: top + h };
+    updateCropBoxStyle();
+  });
+  cropBox.addEventListener('pointerup', () => { moving = false; });
+  cropBox.addEventListener('pointercancel', () => { moving = false; });
+
+  cropApplyBtn.addEventListener('click', () => {
+    const sx = crop.left * cropCanvas.width;
+    const sy = crop.top * cropCanvas.height;
+    const sw = (crop.right - crop.left) * cropCanvas.width;
+    const sh = (crop.bottom - crop.top) * cropCanvas.height;
+
+    const tmp = document.createElement('canvas');
+    tmp.width = Math.max(1, Math.round(sw));
+    tmp.height = Math.max(1, Math.round(sh));
+    tmp.getContext('2d').drawImage(cropCanvas, sx, sy, sw, sh, 0, 0, tmp.width, tmp.height);
+
+    const cropped = new Image();
+    cropped.onload = () => {
+      sourceImage = cropped;
+      proceedToOptimize();
+    };
+    cropped.src = tmp.toDataURL('image/jpeg', 0.95);
+  });
+
+  cropSkipBtn.addEventListener('click', () => { proceedToOptimize(); });
+
+  backToCropBtn.addEventListener('click', () => {
+    if (!uncroppedImage) return;
+    showCropStep(true); // zachowaj poprzednio ustawioną ramkę kadru
+  });
+
+  function proceedToOptimize() {
+    document.getElementById('captureCard').style.display = 'none';
+    previewCard.style.display = '';
+    formCard.style.display = '';
+    actionCard.style.display = '';
+    stepIndicator.textContent = pages.length > 0 ? `KROK 2/3 · STRONA ${pages.length + 1}` : 'KROK 2/3';
+    contrastSlider.value = 0;
+    contrastValue.textContent = '0';
+    setFilter('bw');
+    refreshFilenamePreview();
+    updateGenerateLabel();
+    updateCarousel();
+    previewCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function updateGenerateLabel() {
+    if (generateBtn.dataset.mode === 'reset') return; // nie nadpisuj stanu "Zrób nowy skan"
+    generateBtn.textContent = pages.length > 0
+      ? `Zakończ (${pages.length + 1} str.) i zapisz PDF`
+      : 'Generuj PDF i zapisz';
+  }
+
+  function updateCarousel() {
+    if (pages.length === 0) {
+      pagesCarousel.style.display = 'none';
+      return;
+    }
+    if (carouselIndex >= pages.length) carouselIndex = pages.length - 1;
+    if (carouselIndex < 0) carouselIndex = 0;
+
+    pagesCarousel.style.display = 'flex';
+    carouselImg.src = pages[carouselIndex].dataUrl;
+    carouselLabel.textContent = `Strona ${carouselIndex + 1} z ${pages.length}`;
+    carouselPrev.disabled = carouselIndex === 0;
+    carouselNext.disabled = carouselIndex === pages.length - 1;
+  }
+
+  carouselPrev.addEventListener('click', () => { carouselIndex--; updateCarousel(); });
+  carouselNext.addEventListener('click', () => { carouselIndex++; updateCarousel(); });
+  carouselDelBtn.addEventListener('click', () => {
+    pages.splice(carouselIndex, 1);
+    updateCarousel();
+    updateGenerateLabel();
+  });
+
+  addPageBtn.addEventListener('click', () => {
+    if (!sourceImage) return;
+    pages.push({
+      dataUrl: previewCanvas.toDataURL('image/jpeg', 0.92),
+      width: previewCanvas.width,
+      height: previewCanvas.height
+    });
+    carouselIndex = pages.length - 1;
+    updateCarousel();
+    goToCaptureStep(false);
+    stepIndicator.textContent = `KROK 1/3 · STRONA ${pages.length + 1}`;
+  });
+
+  // ---------- image processing ----------
+  function setFilter(name) {
+    currentFilter = name;
+    filterBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.filter === name)));
+    contrastLabelText.textContent = name === 'bw' ? 'Czułość progu (skan)' : 'Kontrast';
+    contrastSlider.value = 0;
+    contrastValue.textContent = '0';
+    renderPreview();
+  }
+
+  filterBtns.forEach(btn => { btn.addEventListener('click', () => setFilter(btn.dataset.filter)); });
+
+  function renderPreview() {
+    if (!sourceImage) return;
+    const maxW = 1400;
+    const scale = Math.min(1, maxW / sourceImage.naturalWidth);
+    const w = Math.round(sourceImage.naturalWidth * scale);
+    const h = Math.round(sourceImage.naturalHeight * scale);
+    previewCanvas.width = w;
+    previewCanvas.height = h;
+
+    ctx.drawImage(sourceImage, 0, 0, w, h);
+
+    if (currentFilter === 'bw') {
+      // Adaptacyjna binaryzacja: każdy piksel porównywany jest do lokalnego (rozmytego)
+      // tła, nie do jednego globalnego progu - dzięki temu tekst zostaje czarny na białym
+      // nawet przy nierównym oświetleniu (cień na części kartki), tak jak w apkach skanera.
+      // Domyślnie łagodniejsza niż poprzednio + płynne przejście na krawędziach liter,
+      // żeby tekst pozostał czytelny zamiast "postrzępionego" twardego czarno-białego.
+      const sensitivity = 0.075 + (Number(contrastSlider.value) * 0.0016); // ok. 0.01 .. 0.2
+      applyAdaptiveBinarization(w, h, Math.max(0.01, Math.min(0.22, sensitivity)));
+    } else {
+      const baseAmount = currentFilter === 'gray' ? 25 : 0;
+      const baseBrightness = currentFilter === 'gray' ? 6 : 0;
+      const sliderAdjust = Number(contrastSlider.value);
+      const amount = Math.max(-250, Math.min(250, baseAmount + sliderAdjust));
+      const toGray = currentFilter === 'gray';
+      if (toGray || amount !== 0) {
+        applyContrastBrightness(w, h, toGray, amount, baseBrightness);
+      }
+    }
+  }
+
+  // Kontrast/jasność w trybach "Oryginał" i "Skala szarości" - formuła liniowa,
+  // amount w zakresie ok. -255..255 (nie mnożnik!)
+  function applyContrastBrightness(w, h, toGray, amount, brightness) {
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const d = imgData.data;
+    const factor = (259 * (amount + 255)) / (255 * (259 - amount));
+    for (let i = 0; i < d.length; i += 4) {
+      let r = d[i], g = d[i + 1], b = d[i + 2];
+      if (toGray) {
+        const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+        r = g = b = gray;
+      }
+      r = Math.max(0, Math.min(255, factor * (r - 128) + 128 + brightness));
+      g = Math.max(0, Math.min(255, factor * (g - 128) + 128 + brightness));
+      b = Math.max(0, Math.min(255, factor * (b - 128) + 128 + brightness));
+      d[i] = r; d[i + 1] = g; d[i + 2] = b;
+    }
+    ctx.putImageData(imgData, 0, 0);
+  }
+
+  // Tryb "Skan Cz-B": binaryzacja adaptacyjna względem lokalnego tła.
+  // Rozmycie tła liczone jest tanim trikiem: pomniejszenie obrazu (uśrednia sąsiedztwo),
+  // potem powiększenie z wygładzaniem - to przybliżenie dużego rozmycia gaussowskiego.
+  function applyAdaptiveBinarization(w, h, t) {
+    const srcData = ctx.getImageData(0, 0, w, h);
+    const src = srcData.data;
+
+    const bw2 = Math.max(14, Math.round(w / 30));
+    const bh2 = Math.max(14, Math.round(h / 30));
+    const small = document.createElement('canvas');
+    small.width = bw2; small.height = bh2;
+    small.getContext('2d').drawImage(previewCanvas, 0, 0, bw2, bh2);
+
+    const blurUp = document.createElement('canvas');
+    blurUp.width = w; blurUp.height = h;
+    const bctx = blurUp.getContext('2d');
+    bctx.imageSmoothingEnabled = true;
+    bctx.imageSmoothingQuality = 'high';
+    bctx.drawImage(small, 0, 0, w, h);
+    const blurData = bctx.getImageData(0, 0, w, h).data;
+
+    const soft = 0.05; // szerokość płynnego przejścia wokół progu - zapobiega postrzępionym krawędziom
+    const out = ctx.createImageData(w, h);
+    const od = out.data;
+    for (let i = 0; i < src.length; i += 4) {
+      const origGray = 0.299 * src[i] + 0.587 * src[i + 1] + 0.114 * src[i + 2];
+      const bgGray = 0.299 * blurData[i] + 0.587 * blurData[i + 1] + 0.114 * blurData[i + 2];
+      const ratio = origGray / Math.max(1, bgGray);
+      const lower = (1 - t) - soft, upper = (1 - t) + soft;
+      let v;
+      if (ratio <= lower) v = 0;
+      else if (ratio >= upper) v = 255;
+      else {
+        const p = (ratio - lower) / (upper - lower);
+        v = 255 * (p * p * (3 - 2 * p)); // smoothstep - łagodniejsze przejście niż liniowe
+      }
+      od[i] = v; od[i + 1] = v; od[i + 2] = v; od[i + 3] = 255;
+    }
+    ctx.putImageData(out, 0, 0);
+  }
+
+  let contrastDebounce = null;
+  contrastSlider.addEventListener('input', () => {
+    contrastValue.textContent = contrastSlider.value;
+    clearTimeout(contrastDebounce);
+    contrastDebounce = setTimeout(renderPreview, 40);
+  });
+
+
+  // Rysuje na canvasie wizualną kopię strony PDF (obraz + stempel) - bez zależności od
+  // wbudowanej przeglądarki PDF, która nie działa w zagnieżdżonej ramce artefaktu.
+  function renderPdfPreviewMock(d) {
+    const k = 3.2; // mm -> px
+    pdfPreviewCanvas.width = Math.round(d.pageW * k);
+    pdfPreviewCanvas.height = Math.round(d.pageH * k);
+    const pctx = pdfPreviewCanvas.getContext('2d');
+    pctx.fillStyle = '#ffffff';
+    pctx.fillRect(0, 0, pdfPreviewCanvas.width, pdfPreviewCanvas.height);
+
+    const pageImg = new Image();
+    pageImg.onload = () => {
+      pctx.drawImage(pageImg, d.x * k, d.y * k, d.drawW * k, d.drawH * k);
+
+      pctx.strokeStyle = '#dadce0';
+      pctx.lineWidth = 0.25 * k;
+      pctx.beginPath();
+      pctx.moveTo(d.margin * k, (d.stampTop - 4) * k);
+      pctx.lineTo((d.pageW - d.margin) * k, (d.stampTop - 4) * k);
+      pctx.stroke();
+
+      pctx.fillStyle = '#5f6368';
+      pctx.font = `${10.5 * k}px "Space Mono", monospace`;
+      pctx.textBaseline = 'alphabetic';
+
+      const maxTextW = (d.pageW - d.margin * 2) * k;
+      const fitLine = (text) => {
+        if (pctx.measureText(text).width <= maxTextW) return text;
+        let t = text;
+        while (t.length > 3 && pctx.measureText(t + '...').width > maxTextW) t = t.slice(0, -1);
+        return t + '...';
+      };
+
+      let lineY = d.stampTop;
+      if (d.isMulti) {
+        pctx.fillText(`Strona ${d.pageIndex} z ${d.pageTotal}`, d.margin * k, lineY * k);
+        lineY += 6;
+      }
+      if (d.category) {
+        pctx.fillText(`Płatność: ${d.category}`, d.margin * k, lineY * k);
+        lineY += 6;
+      }
+      pctx.fillText(fitLine(`Plik: ${d.filename}`), d.margin * k, lineY * k); lineY += 6;
+      pctx.fillText(fitLine(`Notatka: ${d.opis.length ? d.opis : '—'}`), d.margin * k, lineY * k); lineY += 6;
+      pctx.fillText(`Zapisano (lokalnie): ${d.savedAt}`, d.margin * k, lineY * k); lineY += 6;
+      pctx.fillText(`Zapisano (czas PL): ${d.savedAtPL}`, d.margin * k, lineY * k);
+    };
+    pageImg.src = d.imgData;
+  }
+
+  generateBtn.dataset.mode = 'generate';
+
+  // ---------- PDF generation + save ----------
+  generateBtn.addEventListener('click', async () => {
+    if (generateBtn.dataset.mode === 'reset') {
+      goToCaptureStep(true);
+      return;
+    }
+    if (!sourceImage) return;
+    generateBtn.disabled = true;
+    showStatus('Generuję PDF…', '');
+    stepIndicator.textContent = 'KROK 3/3';
+
+    try {
+      const { jsPDF } = window.jspdf;
+
+      const allPages = [
+        ...pages,
+        { dataUrl: previewCanvas.toDataURL('image/jpeg', 0.92), width: previewCanvas.width, height: previewCanvas.height }
+      ];
+      const isMulti = allPages.length > 1;
+      const lineCount = 4 + (isMulti ? 1 : 0) + (selectedCategory ? 1 : 0);
+
+      const pageW = 210, pageH = 297; // A4 mm
+      const margin = 10;
+      const footerH = 6 * lineCount + 4; // miejsce na stempel, rośnie z liczbą linii
+      const availW = pageW - margin * 2;
+      const availH = pageH - margin * 2 - footerH;
+      const stampTop = pageH - margin - footerH + 6;
+      const stampMaxW = pageW - margin * 2;
+
+      const filename = buildFilename();
+      const nazwa = nazwaInput.value.trim() || 'Dokument';
+      const opis = opisInput.value.trim();
+      const now = new Date();
+      const savedAt = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} `
+        + `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+      // sv-SE daje format YYYY-MM-DD HH:mm:ss niezależnie od strefy telefonu
+      const savedAtPL = now.toLocaleString('sv-SE', { timeZone: 'Europe/Warsaw' });
+
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+      const keywords = filename + (selectedCategory ? `, ${selectedCategory}` : '');
+      doc.setProperties({ title: nazwa, subject: opis, keywords, creator: 'Skaner dokumentów' });
+
+      const fitOneLine = (text) => {
+        const lines = doc.splitTextToSize(text, stampMaxW);
+        return lines.length > 1 ? lines[0].replace(/.{3}$/, '...') : lines[0];
+      };
+
+      let lastDrawParams = null;
+
+      allPages.forEach((p, idx) => {
+        if (idx > 0) doc.addPage();
+
+        const ratio = p.width / p.height;
+        let drawW = availW;
+        let drawH = drawW / ratio;
+        if (drawH > availH) { drawH = availH; drawW = drawH * ratio; }
+        const x = (pageW - drawW) / 2;
+        const y = margin;
+
+        doc.addImage(p.dataUrl, 'JPEG', x, y, drawW, drawH);
+
+        doc.setDrawColor(218, 220, 224);
+        doc.setLineWidth(0.2);
+        doc.line(margin, stampTop - 4, pageW - margin, stampTop - 4);
+
+        doc.setFont('courier', 'normal');
+        doc.setFontSize(10.5);
+        doc.setTextColor(95, 99, 104);
+
+        let lineY = stampTop;
+        if (isMulti) {
+          doc.text(`Strona ${idx + 1} z ${allPages.length}`, margin, lineY);
+          lineY += 6;
+        }
+        if (selectedCategory) {
+          doc.text(`Płatność: ${selectedCategory}`, margin, lineY);
+          lineY += 6;
+        }
+        doc.text(fitOneLine(`Plik: ${filename}`), margin, lineY); lineY += 6;
+        doc.text(fitOneLine(`Notatka: ${opis.length ? opis : '—'}`), margin, lineY); lineY += 6;
+        doc.text(`Zapisano (lokalnie): ${savedAt}`, margin, lineY); lineY += 6;
+        doc.text(`Zapisano (czas PL): ${savedAtPL}`, margin, lineY);
+
+        if (idx === allPages.length - 1) {
+          lastDrawParams = { dataUrl: p.dataUrl, x, y, drawW, drawH };
+        }
+      });
+
+      const blob = doc.output('blob');
+
+      if (lastPdfUrl) URL.revokeObjectURL(lastPdfUrl);
+      lastPdfUrl = URL.createObjectURL(blob);
+      previewPdfBtn.style.display = '';
+
+      if (isMulti) {
+        pagesNote.textContent = `Podgląd pokazuje ostatnią z ${allPages.length} stron dokumentu.`;
+        pagesNote.style.display = '';
+      } else {
+        pagesNote.style.display = 'none';
+      }
+
+      renderPdfPreviewMock({
+        imgData: lastDrawParams.dataUrl, x: lastDrawParams.x, y: lastDrawParams.y,
+        drawW: lastDrawParams.drawW, drawH: lastDrawParams.drawH,
+        pageW, pageH, margin, stampTop, filename, opis, savedAt, savedAtPL,
+        isMulti, pageIndex: allPages.length, pageTotal: allPages.length, category: selectedCategory
+      });
+
+      const saved = await saveFile(filename, blob);
+      if (saved) {
+        showStatus(`Zapisano: ${filename}${isMulti ? ` (${allPages.length} str.)` : ''}`, 'ok');
+        generateBtn.textContent = 'Zrób nowy skan';
+        generateBtn.classList.add('is-done');
+        generateBtn.dataset.mode = 'reset';
+        generateBtn.disabled = false;
+        return;
+      } else {
+        showStatus('Nie udało się zapisać pliku. Spróbuj ponownie.', 'err');
+      }
+    } catch (err) {
+      const code = err && err.code;
+      if (code === 'declined') {
+        showStatus('Zapis anulowany.', '');
+      } else if (code === 'rate_limited') {
+        showStatus('Spróbuj ponownie za chwilę.', 'err');
+      } else {
+        showStatus('Nie udało się zapisać pliku. Spróbuj ponownie.', 'err');
+      }
+    } finally {
+      generateBtn.disabled = false;
+    }
+  });
+
+  function showStatus(msg, kind) {
+    statusMsg.textContent = msg;
+    statusMsg.className = 'status' + (kind ? ' ' + kind : '');
+  }
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+    });
+  }
+})();
+</script>
+</body>
+</html>
