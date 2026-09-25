@@ -462,7 +462,6 @@
   </header>
 
   <h1>Zeskanuj dokument</h1>
-  <p class="sub">Zrób zdjęcie, wykadruj, popraw czytelność i zapisz jako PDF z nazwą wg daty.</p>
 
   <!-- CAPTURE + CROP (jeden krok) -->
   <div class="card" id="captureCard">
@@ -502,42 +501,8 @@
     </div>
   </div>
 
-  <!-- PREVIEW -->
-  <div class="card" id="previewCard" style="display:none;">
-    <p class="card-title">OPTYMALIZACJA</p>
-
-    <div class="carousel" id="pagesCarousel">
-      <button type="button" class="carousel-arrow" id="carouselPrev" aria-label="Poprzednia strona">‹</button>
-      <div class="carousel-view">
-        <img id="carouselImg" alt="Podgląd zapisanej strony">
-        <span class="carousel-label" id="carouselLabel">Strona 1 z 1</span>
-        <button type="button" class="carousel-del" id="carouselDelBtn" aria-label="Usuń tę stronę">×</button>
-      </div>
-      <button type="button" class="carousel-arrow" id="carouselNext" aria-label="Następna strona">›</button>
-    </div>
-
-    <div class="preview-shell">
-      <canvas id="previewCanvas"></canvas>
-    </div>
-    <div class="filter-row">
-      <button type="button" class="filter-btn" data-filter="original" aria-pressed="false">Oryginał</button>
-      <button type="button" class="filter-btn" data-filter="bw" aria-pressed="true">Skan Cz-B</button>
-      <button type="button" class="filter-btn" data-filter="gray" aria-pressed="false">Skala szarości</button>
-    </div>
-    <div class="slider-row">
-      <label for="contrastSlider"><span id="contrastLabelText">Czułość progu</span> <span id="contrastValue">0</span></label>
-      <input type="range" id="contrastSlider" min="-80" max="80" value="0" step="1">
-    </div>
-
-    <div class="split-row">
-      <button type="button" class="secondary-btn" id="backToCropBtn">Cofnij (popraw kadr)</button>
-      <button type="button" class="secondary-btn" id="retakeBtn">Zrób zdjęcie ponownie</button>
-    </div>
-    <button type="button" class="primary-btn" id="addPageBtn" style="margin-top:14px;">+ Dodaj stronę i zeskanuj kolejną</button>
-  </div>
-
   <!-- FORM -->
-  <div class="card" id="formCard" style="display:none;">
+  <div class="card" id="formCard">
     <p class="card-title">OPIS DOKUMENTU</p>
 
     <label for="nazwaInput">Nazwa</label>
@@ -592,6 +557,40 @@
     </div>
   </div>
 
+  <!-- PREVIEW -->
+  <div class="card" id="previewCard" style="display:none;">
+    <p class="card-title">OPTYMALIZACJA</p>
+
+    <div class="carousel" id="pagesCarousel">
+      <button type="button" class="carousel-arrow" id="carouselPrev" aria-label="Poprzednia strona">‹</button>
+      <div class="carousel-view">
+        <img id="carouselImg" alt="Podgląd zapisanej strony">
+        <span class="carousel-label" id="carouselLabel">Strona 1 z 1</span>
+        <button type="button" class="carousel-del" id="carouselDelBtn" aria-label="Usuń tę stronę">×</button>
+      </div>
+      <button type="button" class="carousel-arrow" id="carouselNext" aria-label="Następna strona">›</button>
+    </div>
+
+    <div class="preview-shell">
+      <canvas id="previewCanvas"></canvas>
+    </div>
+    <div class="filter-row">
+      <button type="button" class="filter-btn" data-filter="original" aria-pressed="false">Oryginał</button>
+      <button type="button" class="filter-btn" data-filter="bw" aria-pressed="true">Skan Cz-B</button>
+      <button type="button" class="filter-btn" data-filter="gray" aria-pressed="false">Skala szarości</button>
+    </div>
+    <div class="slider-row">
+      <label for="contrastSlider"><span id="contrastLabelText">Czułość progu</span> <span id="contrastValue">0</span></label>
+      <input type="range" id="contrastSlider" min="-80" max="80" value="0" step="1">
+    </div>
+
+    <div class="split-row">
+      <button type="button" class="secondary-btn" id="backToCropBtn">Cofnij (popraw kadr)</button>
+      <button type="button" class="secondary-btn" id="retakeBtn">Zrób zdjęcie ponownie</button>
+    </div>
+    <button type="button" class="primary-btn" id="addPageBtn" style="margin-top:14px;">+ Dodaj stronę i zeskanuj kolejną</button>
+  </div>
+
   <!-- ACTION -->
   <div id="actionCard" style="display:none;">
     <div class="category-row" id="categoryRow">
@@ -602,22 +601,12 @@
     </div>
     <p class="crop-hint" style="margin-top:-8px; margin-bottom:14px;">Przytrzymaj przycisk, aby zmienić jego nazwę.</p>
     <button type="button" class="primary-btn" id="generateBtn">Generuj PDF i zapisz</button>
+    <button type="button" class="primary-btn" id="linkLogFileBtn" style="margin-top:10px;">Połącz plik .xlsx</button>
     <p class="status" id="statusMsg"></p>
     <button type="button" class="primary-btn" id="previewPdfBtn" style="display:none; margin-top:10px;">Otwórz podgląd PDF</button>
     <p class="crop-hint" id="pagesNote" style="display:none;"></p>
     <div id="pdfPreviewWrap" style="display:none; margin-top:12px;">
       <canvas id="pdfPreviewCanvas" style="width:100%; height:auto; display:block; border:1px solid var(--rule); border-radius:2px; background:#fff;"></canvas>
-    </div>
-  </div>
-
-  <p class="note" id="introNote"><b>Jak to działa:</b> zdjęcie zostaje przetworzone lokalnie w przeglądarce (kadrowanie, kontrast, skala szarości), złożone w PDF i zapisane na telefonie. Wysyłka do Google Drive / OneDrive to kolejny etap.</p>
-
-  <div class="card" id="logCard" style="display:none;">
-    <p class="card-title">DZIENNIK ZAPISÓW (EXCEL)</p>
-    <p class="crop-hint" id="logStatusText" style="margin-top:0;">Dziennik zapisywany lokalnie w tej przeglądarce.</p>
-    <div class="split-row">
-      <button type="button" class="secondary-btn" id="linkLogFileBtn" style="margin-top:0;">Połącz plik .xlsx</button>
-      <button type="button" class="secondary-btn" id="exportLogBtn" style="margin-top:0;">Eksportuj dziennik</button>
     </div>
   </div>
 
@@ -670,7 +659,6 @@
   const contrastSlider = document.getElementById('contrastSlider');
   const contrastValue = document.getElementById('contrastValue');
   const previewCard = document.getElementById('previewCard');
-  const logCard = document.getElementById('logCard');
   const formCard = document.getElementById('formCard');
   const actionCard = document.getElementById('actionCard');
   const previewCanvas = document.getElementById('previewCanvas');
@@ -794,9 +782,7 @@
     });
   });
   const statusMsg = document.getElementById('statusMsg');
-  const logStatusText = document.getElementById('logStatusText');
   const linkLogFileBtn = document.getElementById('linkLogFileBtn');
-  const exportLogBtn = document.getElementById('exportLogBtn');
 
   // ---------- dziennik zapisów (Excel) ----------
   const LOG_HEADERS = ['Data zapisu', 'Plik', 'Nazwa', 'Opis', 'Płatność', 'Liczba stron'];
@@ -847,22 +833,6 @@
       localStorage.setItem(LOCAL_LOG_KEY, JSON.stringify(arr));
     } catch (e) { /* localStorage niedostepny */ }
   }
-  function loadLocalLogEntries() {
-    try {
-      const raw = localStorage.getItem(LOCAL_LOG_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch (e) { return []; }
-  }
-
-  function rowsToXlsxBlob(entries) {
-    const rows = [LOG_HEADERS, ...entries.map(e => [e.savedAt, e.filename, e.nazwa, e.opis, e.category, e.pages])];
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols'] = [{ wch: 19 }, { wch: 34 }, { wch: 22 }, { wch: 34 }, { wch: 14 }, { wch: 8 }];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Dziennik');
-    const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
-    return new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  }
 
   async function appendRowToLogFile(row) {
     if (!logFileHandle) return;
@@ -892,22 +862,22 @@
     await writable.close();
   }
 
-  function updateLogStatus() {
+  function updateLogButton() {
     if (!supportsFSA) {
-      logStatusText.textContent = 'Dziennik zapisywany lokalnie. Bezposrednie laczenie z plikiem .xlsx wymaga przegladarki obslugujacej ten mechanizm (Chrome na Androidzie).';
+      linkLogFileBtn.textContent = 'Plik .xlsx niedostępny tutaj';
       linkLogFileBtn.disabled = true;
     } else if (logFileHandle) {
-      logStatusText.textContent = `Połączono z plikiem: ${logFileHandle.name}`;
+      linkLogFileBtn.textContent = `Połączono: ${logFileHandle.name}`;
     } else {
-      logStatusText.textContent = 'Dziennik zapisywany lokalnie w tej przeglądarce. Połącz plik .xlsx, żeby wpisy dopisywały się też do niego.';
+      linkLogFileBtn.textContent = 'Połącz plik .xlsx';
     }
   }
-  updateLogStatus();
+  updateLogButton();
 
   (async () => {
     if (supportsFSA) {
       const h = await idbLoadHandle();
-      if (h) { logFileHandle = h; updateLogStatus(); }
+      if (h) { logFileHandle = h; updateLogButton(); }
     }
   })();
 
@@ -920,14 +890,8 @@
       });
       logFileHandle = handle;
       await idbSaveHandle(handle);
-      updateLogStatus();
+      updateLogButton();
     } catch (e) { /* uzytkownik anulowal wybor */ }
-  });
-
-  exportLogBtn.addEventListener('click', () => {
-    const entries = loadLocalLogEntries();
-    if (!entries.length) { logStatusText.textContent = 'Dziennik jest jeszcze pusty - wygeneruj przynajmniej jeden PDF.'; return; }
-    saveFile('dziennik-skanera.xlsx', rowsToXlsxBlob(entries));
   });
   const previewPdfBtn = document.getElementById('previewPdfBtn');
   const pdfPreviewWrap = document.getElementById('pdfPreviewWrap');
@@ -952,7 +916,6 @@
     }
   });
   const stepIndicator = document.getElementById('stepIndicator');
-  const introNote = document.getElementById('introNote');
 
   let sourceImage = null;    // HTMLImageElement — aktualny obraz (po ew. kadrowaniu)
   let uncroppedImage = null; // obraz sprzed kadrowania - potrzebny do przycisku "Cofnij"
@@ -1083,9 +1046,8 @@
     captureSection.style.display = '';
     captureCardTitle.textContent = 'ZDJĘCIE';
     previewCard.style.display = 'none';
-    formCard.style.display = 'none';
+    formCard.style.display = '';
     actionCard.style.display = 'none';
-    logCard.style.display = 'none';
     stepIndicator.textContent = 'KROK 1/3';
     previewPdfBtn.style.display = 'none';
     pdfPreviewWrap.style.display = 'none';
@@ -1123,8 +1085,6 @@
     previewCard.style.display = 'none';
     formCard.style.display = 'none';
     actionCard.style.display = 'none';
-    logCard.style.display = 'none';
-    introNote.style.display = 'none';
     captureSection.style.display = 'none';
     cropSection.style.display = '';
     captureCardTitle.textContent = 'KADROWANIE';
@@ -1148,10 +1108,8 @@
     const detected = estimateAutoCrop(cropCanvas);
     if (detected) {
       crop = detected;
-      cropHint.textContent = 'Wykryto krawędzie dokumentu automatycznie — w razie potrzeby popraw ręcznie.';
     } else {
       crop = { left: 0.04, top: 0.04, right: 0.96, bottom: 0.96 };
-      cropHint.textContent = 'Nie udało się wykryć krawędzi automatycznie — dopasuj kadr ręcznie.';
     }
     updateCropBoxStyle();
   }
@@ -1433,9 +1391,8 @@
     markStep('optimize');
     document.getElementById('captureCard').style.display = 'none';
     previewCard.style.display = '';
-    formCard.style.display = '';
+    formCard.style.display = 'none';
     actionCard.style.display = '';
-    logCard.style.display = '';
     stepIndicator.textContent = pages.length > 0 ? `KROK 2/3 · STRONA ${pages.length + 1}` : 'KROK 2/3';
     contrastSlider.value = 0;
     contrastValue.textContent = '0';
