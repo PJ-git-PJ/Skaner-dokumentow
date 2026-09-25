@@ -573,6 +573,20 @@
       </div>
     </div>
 
+    <div class="toggle-row">
+      <p class="label-text">Wyślij e-mailem po zapisaniu</p>
+      <label class="switch">
+        <input type="checkbox" id="emailToggle">
+        <span class="track"></span>
+      </label>
+    </div>
+
+    <div id="emailAddressRow" style="display:none;">
+      <label for="emailAddressInput">Adres e-mail</label>
+      <input type="email" id="emailAddressInput" placeholder="np. jan.kowalski@firma.pl">
+      <p class="crop-hint" style="text-align:left; margin-top:6px;">Otworzy się gotowy szkic maila — plik trzeba dołączyć ręcznie z Pobranych (przeglądarka nie może zrobić tego automatycznie).</p>
+    </div>
+
     <div class="filename-stub">
       <span class="fx-label">NAZWA PLIKU →</span>
       <span class="fx-name" id="filenamePreview">—</span>
@@ -599,9 +613,19 @@
 
   <p class="note" id="introNote"><b>Jak to działa:</b> zdjęcie zostaje przetworzone lokalnie w przeglądarce (kadrowanie, kontrast, skala szarości), złożone w PDF i zapisane na telefonie. Wysyłka do Google Drive / OneDrive to kolejny etap.</p>
 
+  <div class="card" id="logCard">
+    <p class="card-title">DZIENNIK ZAPISÓW (EXCEL)</p>
+    <p class="crop-hint" id="logStatusText" style="margin-top:0;">Dziennik zapisywany lokalnie w tej przeglądarce.</p>
+    <div class="split-row">
+      <button type="button" class="secondary-btn" id="linkLogFileBtn" style="margin-top:0;">Połącz plik .xlsx</button>
+      <button type="button" class="secondary-btn" id="exportLogBtn" style="margin-top:0;">Eksportuj dziennik</button>
+    </div>
+  </div>
+
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 (function () {
   "use strict";
@@ -665,6 +689,45 @@
   const generateBtn = document.getElementById('generateBtn');
   const categoryBtns = document.querySelectorAll('.cat-btn');
   let selectedCategory = null;
+
+  // ---------- wysylanie e-mailem (szkic mailto) - ustawienia zapamietane trwale w tej przegladarce ----------
+  const emailToggle = document.getElementById('emailToggle');
+  const emailAddressRow = document.getElementById('emailAddressRow');
+  const emailAddressInput = document.getElementById('emailAddressInput');
+  const EMAIL_ENABLED_KEY = 'skanerEmailEnabled';
+  const EMAIL_ADDRESS_KEY = 'skanerEmailAddress';
+
+  try {
+    if (localStorage.getItem(EMAIL_ENABLED_KEY) === 'true') emailToggle.checked = true;
+    const savedAddr = localStorage.getItem(EMAIL_ADDRESS_KEY);
+    if (savedAddr) emailAddressInput.value = savedAddr;
+  } catch (e) { /* localStorage niedostepny */ }
+  emailAddressRow.style.display = emailToggle.checked ? '' : 'none';
+
+  emailToggle.addEventListener('change', () => {
+    emailAddressRow.style.display = emailToggle.checked ? '' : 'none';
+    try { localStorage.setItem(EMAIL_ENABLED_KEY, String(emailToggle.checked)); } catch (e) {}
+  });
+  const saveEmailAddress = () => {
+    try { localStorage.setItem(EMAIL_ADDRESS_KEY, emailAddressInput.value.trim()); } catch (e) {}
+  };
+  emailAddressInput.addEventListener('input', saveEmailAddress);
+  emailAddressInput.addEventListener('change', saveEmailAddress);
+
+  function openEmailDraft(fname) {
+    const addr = emailAddressInput.value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr)) {
+      showStatus('Zapisano PDF, ale nie otwarto e-maila — sprawdź adres e-mail.', 'err');
+      return;
+    }
+    const subject = encodeURIComponent(`Skan: ${fname}`);
+    const body = encodeURIComponent(
+      `W załączniku: ${fname}\n\n` +
+      `Plik znajduje się w folderze Pobrane na telefonie — dołącz go ręcznie przed wysłaniem ` +
+      `(przeglądarka nie może zrobić tego automatycznie).`
+    );
+    window.location.href = `mailto:${addr}?subject=${subject}&body=${body}`;
+  }
 
   // ---------- niestandardowe nazwy przyciskow kategorii (zapamietane lokalnie w tej przegladarce) ----------
   const CAT_LABELS_KEY = 'skanerCategoryLabels';
@@ -731,6 +794,141 @@
     });
   });
   const statusMsg = document.getElementById('statusMsg');
+  const logStatusText = document.getElementById('logStatusText');
+  const linkLogFileBtn = document.getElementById('linkLogFileBtn');
+  const exportLogBtn = document.getElementById('exportLogBtn');
+
+  // ---------- dziennik zapisów (Excel) ----------
+  const LOG_HEADERS = ['Data zapisu', 'Plik', 'Nazwa', 'Opis', 'Płatność', 'Liczba stron'];
+  const LOCAL_LOG_KEY = 'skanerLogEntries';
+  let logFileHandle = null;
+
+  const supportsFSA = 'showSaveFilePicker' in window && (() => {
+    try { return window.self === window.top; } catch (e) { return false; }
+  })();
+
+  function idbOpen() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open('skanerDokDB', 1);
+      req.onupgradeneeded = () => req.result.createObjectStore('handles');
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function idbSaveHandle(handle) {
+    try {
+      const db = await idbOpen();
+      await new Promise((res, rej) => {
+        const tx = db.transaction('handles', 'readwrite');
+        tx.objectStore('handles').put(handle, 'logFile');
+        tx.oncomplete = res;
+        tx.onerror = () => rej(tx.error);
+      });
+    } catch (e) { /* IndexedDB niedostepny - po prostu nie zapamietamy pliku miedzy sesjami */ }
+  }
+  async function idbLoadHandle() {
+    try {
+      const db = await idbOpen();
+      return await new Promise((res, rej) => {
+        const tx = db.transaction('handles', 'readonly');
+        const req = tx.objectStore('handles').get('logFile');
+        req.onsuccess = () => res(req.result || null);
+        req.onerror = () => rej(req.error);
+      });
+    } catch (e) { return null; }
+  }
+
+  function appendLocalLogEntry(row) {
+    try {
+      const raw = localStorage.getItem(LOCAL_LOG_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      arr.push(row);
+      if (arr.length > 3000) arr.splice(0, arr.length - 3000);
+      localStorage.setItem(LOCAL_LOG_KEY, JSON.stringify(arr));
+    } catch (e) { /* localStorage niedostepny */ }
+  }
+  function loadLocalLogEntries() {
+    try {
+      const raw = localStorage.getItem(LOCAL_LOG_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) { return []; }
+  }
+
+  function rowsToXlsxBlob(entries) {
+    const rows = [LOG_HEADERS, ...entries.map(e => [e.savedAt, e.filename, e.nazwa, e.opis, e.category, e.pages])];
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{ wch: 19 }, { wch: 34 }, { wch: 22 }, { wch: 34 }, { wch: 14 }, { wch: 8 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Dziennik');
+    const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+    return new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  }
+
+  async function appendRowToLogFile(row) {
+    if (!logFileHandle) return;
+    if ((await logFileHandle.queryPermission({ mode: 'readwrite' })) !== 'granted') {
+      if ((await logFileHandle.requestPermission({ mode: 'readwrite' })) !== 'granted') {
+        throw new Error('Brak uprawnien do pliku dziennika.');
+      }
+    }
+    const file = await logFileHandle.getFile();
+    let rows = [LOG_HEADERS];
+    if (file.size > 0) {
+      try {
+        const buf = await file.arrayBuffer();
+        const wb = XLSX.read(buf, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const existing = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        if (existing.length) rows = existing;
+      } catch (e) { /* nie udalo sie odczytac istniejacej tresci */ }
+    }
+    rows.push([row.savedAt, row.filename, row.nazwa, row.opis, row.category, row.pages]);
+    const ws2 = XLSX.utils.aoa_to_sheet(rows);
+    const wb2 = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb2, ws2, 'Dziennik');
+    const out = XLSX.write(wb2, { type: 'array', bookType: 'xlsx' });
+    const writable = await logFileHandle.createWritable();
+    await writable.write(out);
+    await writable.close();
+  }
+
+  function updateLogStatus() {
+    if (!supportsFSA) {
+      logStatusText.textContent = 'Dziennik zapisywany lokalnie. Bezposrednie laczenie z plikiem .xlsx wymaga przegladarki obslugujacej ten mechanizm (Chrome na Androidzie).';
+      linkLogFileBtn.disabled = true;
+    } else if (logFileHandle) {
+      logStatusText.textContent = `Połączono z plikiem: ${logFileHandle.name}`;
+    } else {
+      logStatusText.textContent = 'Dziennik zapisywany lokalnie w tej przeglądarce. Połącz plik .xlsx, żeby wpisy dopisywały się też do niego.';
+    }
+  }
+  updateLogStatus();
+
+  (async () => {
+    if (supportsFSA) {
+      const h = await idbLoadHandle();
+      if (h) { logFileHandle = h; updateLogStatus(); }
+    }
+  })();
+
+  linkLogFileBtn.addEventListener('click', async () => {
+    if (!supportsFSA) return;
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: 'dziennik-skanera.xlsx',
+        types: [{ description: 'Excel', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }]
+      });
+      logFileHandle = handle;
+      await idbSaveHandle(handle);
+      updateLogStatus();
+    } catch (e) { /* uzytkownik anulowal wybor */ }
+  });
+
+  exportLogBtn.addEventListener('click', () => {
+    const entries = loadLocalLogEntries();
+    if (!entries.length) { logStatusText.textContent = 'Dziennik jest jeszcze pusty - wygeneruj przynajmniej jeden PDF.'; return; }
+    saveFile('dziennik-skanera.xlsx', rowsToXlsxBlob(entries));
+  });
   const previewPdfBtn = document.getElementById('previewPdfBtn');
   const pdfPreviewWrap = document.getElementById('pdfPreviewWrap');
   const pdfPreviewCanvas = document.getElementById('pdfPreviewCanvas');
@@ -1567,6 +1765,17 @@
         generateBtn.classList.add('is-done');
         generateBtn.dataset.mode = 'reset';
         generateBtn.disabled = false;
+
+        const logRow = {
+          savedAt, filename, nazwa, opis, category: selectedCategory || '', pages: allPages.length
+        };
+        appendLocalLogEntry(logRow);
+        if (logFileHandle) {
+          appendRowToLogFile(logRow).catch(() => {
+            showStatus('Zapisano PDF, ale nie udało się dopisać do pliku dziennika.', 'err');
+          });
+        }
+        if (emailToggle.checked) openEmailDraft(filename);
         return;
       } else {
         showStatus('Nie udało się zapisać pliku. Spróbuj ponownie.', 'err');
