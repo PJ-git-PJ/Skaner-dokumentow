@@ -143,7 +143,7 @@
     color: inherit;
     border: 1.5px dashed var(--stamp);
     border-radius: 14px;
-    padding: 30px 16px;
+    padding: 22px 12px;
     text-align: center;
     background: var(--paper-raised);
     cursor: pointer;
@@ -151,9 +151,9 @@
   }
   .capture-zone:active { background: var(--rule); }
   .capture-zone:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-  .capture-zone .icon { width: 46px; height: 46px; margin: 0 auto 12px; color: var(--ink-soft); }
-  .capture-zone .cta { font-weight: 700; font-size: 15.5px; margin-bottom: 4px; }
-  .capture-zone .hint { font-size: 13px; color: var(--ink-faint); }
+  .capture-zone .icon { width: 35px; height: 35px; margin: 0 auto 9px; color: var(--ink-soft); }
+  .capture-zone .cta { font-weight: 700; font-size: 14px; margin-bottom: 3px; }
+  .capture-zone .hint { font-size: 11px; color: var(--ink-faint); }
 
   #fileInput {
     position: absolute;
@@ -491,11 +491,11 @@
       </div>
       <p class="crop-hint" id="cropHint">Przeciągnij rogi, aby dopasować kadr, albo przesuń całą ramkę.</p>
       <div class="split-row">
-        <button type="button" class="primary-btn" id="cropApplyBtn">Przytnij i przejdź dalej</button>
+        <button type="button" class="primary-btn" id="cropApplyBtn">Przytnij</button>
         <button type="button" class="secondary-btn" id="cropRetakeBtn">Zrób ponownie</button>
       </div>
       <div class="split-row">
-        <button type="button" class="primary-btn" id="autoDetectBtn">Wykryj krawędzie automatycznie</button>
+        <button type="button" class="primary-btn" id="autoDetectBtn">Wykryj krawędzie</button>
         <button type="button" class="secondary-btn" id="cropSkipBtn">Pomiń kadrowanie</button>
       </div>
     </div>
@@ -555,6 +555,14 @@
       <span class="fx-label">NAZWA PLIKU →</span>
       <span class="fx-name" id="filenamePreview">—</span>
     </div>
+
+    <div class="category-row" id="categoryRow" style="margin-top:16px;">
+      <button type="button" class="cat-btn" data-category="Karta PJ" aria-pressed="false">Karta PJ</button>
+      <button type="button" class="cat-btn" data-category="Cash PJ" aria-pressed="false">Cash PJ</button>
+      <button type="button" class="cat-btn" data-category="Karta PJB" aria-pressed="false">Karta PJB</button>
+      <button type="button" class="cat-btn" data-category="Karta M2M" aria-pressed="false">Karta M2M</button>
+    </div>
+    <p class="crop-hint" style="margin-top:6px;">Przytrzymaj przycisk, aby zmienić jego nazwę.</p>
   </div>
 
   <!-- PREVIEW -->
@@ -593,13 +601,6 @@
 
   <!-- ACTION -->
   <div id="actionCard" style="display:none;">
-    <div class="category-row" id="categoryRow">
-      <button type="button" class="cat-btn" data-category="Karta PJ" aria-pressed="false">Karta PJ</button>
-      <button type="button" class="cat-btn" data-category="Cash PJ" aria-pressed="false">Cash PJ</button>
-      <button type="button" class="cat-btn" data-category="Karta PJB" aria-pressed="false">Karta PJB</button>
-      <button type="button" class="cat-btn" data-category="Karta M2M" aria-pressed="false">Karta M2M</button>
-    </div>
-    <p class="crop-hint" style="margin-top:-8px; margin-bottom:14px;">Przytrzymaj przycisk, aby zmienić jego nazwę.</p>
     <button type="button" class="primary-btn" id="generateBtn">Generuj PDF i zapisz</button>
     <button type="button" class="primary-btn" id="linkLogFileBtn" style="margin-top:10px;">Połącz plik .xlsx</button>
     <p class="status" id="statusMsg"></p>
