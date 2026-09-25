@@ -599,7 +599,10 @@
   <!-- ACTION -->
   <div id="actionCard" style="display:none;">
     <button type="button" class="primary-btn" id="generateBtn">Generuj PDF i zapisz</button>
-    <button type="button" class="primary-btn" id="linkLogFileBtn" style="margin-top:10px;">Połącz plik .xlsx</button>
+    <div class="split-row">
+      <button type="button" class="primary-btn" id="linkLogFileBtn">Połącz plik .xlsx</button>
+      <button type="button" class="secondary-btn" id="unlinkLogFileBtn">Odłącz plik</button>
+    </div>
     <p class="status" id="statusMsg"></p>
     <button type="button" class="primary-btn" id="previewPdfBtn" style="display:none; margin-top:10px;">Otwórz podgląd PDF</button>
     <p class="crop-hint" id="pagesNote" style="display:none;"></p>
@@ -781,6 +784,7 @@
   });
   const statusMsg = document.getElementById('statusMsg');
   const linkLogFileBtn = document.getElementById('linkLogFileBtn');
+  const unlinkLogFileBtn = document.getElementById('unlinkLogFileBtn');
 
   // ---------- dziennik zapisów (Excel) ----------
   const LOG_HEADERS = ['Data zapisu', 'Plik', 'Nazwa', 'Opis', 'Płatność', 'Liczba stron'];
@@ -820,6 +824,17 @@
         req.onerror = () => rej(req.error);
       });
     } catch (e) { return null; }
+  }
+  async function idbDeleteHandle() {
+    try {
+      const db = await idbOpen();
+      await new Promise((res, rej) => {
+        const tx = db.transaction('handles', 'readwrite');
+        tx.objectStore('handles').delete('logFile');
+        tx.oncomplete = res;
+        tx.onerror = () => rej(tx.error);
+      });
+    } catch (e) { /* IndexedDB niedostepny */ }
   }
 
   function appendLocalLogEntry(row) {
@@ -864,10 +879,13 @@
     if (!supportsFSA) {
       linkLogFileBtn.textContent = 'Plik .xlsx niedostępny tutaj';
       linkLogFileBtn.disabled = true;
+      unlinkLogFileBtn.disabled = true;
     } else if (logFileHandle) {
       linkLogFileBtn.textContent = `Połączono: ${logFileHandle.name}`;
+      unlinkLogFileBtn.disabled = false;
     } else {
       linkLogFileBtn.textContent = 'Połącz plik .xlsx';
+      unlinkLogFileBtn.disabled = true;
     }
   }
   updateLogButton();
@@ -890,6 +908,12 @@
       await idbSaveHandle(handle);
       updateLogButton();
     } catch (e) { /* uzytkownik anulowal wybor */ }
+  });
+
+  unlinkLogFileBtn.addEventListener('click', async () => {
+    logFileHandle = null;
+    await idbDeleteHandle();
+    updateLogButton();
   });
   const previewPdfBtn = document.getElementById('previewPdfBtn');
   const pdfPreviewWrap = document.getElementById('pdfPreviewWrap');
