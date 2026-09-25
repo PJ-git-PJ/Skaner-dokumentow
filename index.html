@@ -123,7 +123,7 @@
 
   .card-title {
     font-family: "Space Mono", monospace;
-    font-size: 11.5px;
+    font-size: 13px;
     letter-spacing: 0.03em;
     color: var(--ink-faint);
     margin: 0 0 14px;
@@ -199,7 +199,7 @@
   .crop-handle[data-corner="tr"] { top: 0; right: 0; transform: translate(50%, -50%); cursor: nesw-resize; }
   .crop-handle[data-corner="bl"] { bottom: 0; left: 0; transform: translate(-50%, 50%); cursor: nesw-resize; }
   .crop-handle[data-corner="br"] { bottom: 0; right: 0; transform: translate(50%, 50%); cursor: nwse-resize; }
-  .crop-hint { font-size: 12.5px; color: var(--ink-faint); margin: 10px 0 0; text-align: center; }
+  .crop-hint { font-size: 14px; color: var(--ink-faint); margin: 10px 0 0; text-align: center; }
 
   .preview-shell {
     position: relative;
@@ -228,7 +228,7 @@
     background: var(--paper-raised);
     color: var(--ink-soft);
     font-family: "Manrope", sans-serif;
-    font-size: 11px;
+    font-size: 12.5px;
     font-weight: 600;
     line-height: 1.2;
     text-align: center;
@@ -346,7 +346,7 @@
     color: var(--stamp-ink);
     font-family: "Manrope", sans-serif;
     font-weight: 800;
-    font-size: 15.5px;
+    font-size: 17px;
     letter-spacing: 0.01em;
     cursor: pointer;
     transition: background .12s ease, transform .06s ease;
@@ -363,7 +363,7 @@
     appearance: none;
     font-family: "Manrope", sans-serif;
     font-weight: 700;
-    font-size: 14.5px;
+    font-size: 16px;
     padding: 13px;
     margin-top: 14px;
     border-radius: 14px;
@@ -433,7 +433,7 @@
     box-shadow: 0 1px 4px var(--shadow);
   }
 
-  .status { margin-top: 12px; font-size: 13px; text-align: center; min-height: 18px; color: var(--ink-soft); }
+  .status { margin-top: 12px; font-size: 15px; text-align: center; min-height: 18px; color: var(--ink-soft); }
   .status.err { color: var(--danger); }
   .status.ok { color: var(--ok); }
 
@@ -584,7 +584,6 @@
     <div id="emailAddressRow" style="display:none;">
       <label for="emailAddressInput">Adres e-mail</label>
       <input type="email" id="emailAddressInput" placeholder="np. jan.kowalski@firma.pl">
-      <p class="crop-hint" style="text-align:left; margin-top:6px;">Otworzy się gotowy szkic maila — plik trzeba dołączyć ręcznie z Pobranych (przeglądarka nie może zrobić tego automatycznie).</p>
     </div>
 
     <div class="filename-stub">
@@ -613,7 +612,7 @@
 
   <p class="note" id="introNote"><b>Jak to działa:</b> zdjęcie zostaje przetworzone lokalnie w przeglądarce (kadrowanie, kontrast, skala szarości), złożone w PDF i zapisane na telefonie. Wysyłka do Google Drive / OneDrive to kolejny etap.</p>
 
-  <div class="card" id="logCard">
+  <div class="card" id="logCard" style="display:none;">
     <p class="card-title">DZIENNIK ZAPISÓW (EXCEL)</p>
     <p class="crop-hint" id="logStatusText" style="margin-top:0;">Dziennik zapisywany lokalnie w tej przeglądarce.</p>
     <div class="split-row">
@@ -671,6 +670,7 @@
   const contrastSlider = document.getElementById('contrastSlider');
   const contrastValue = document.getElementById('contrastValue');
   const previewCard = document.getElementById('previewCard');
+  const logCard = document.getElementById('logCard');
   const formCard = document.getElementById('formCard');
   const actionCard = document.getElementById('actionCard');
   const previewCanvas = document.getElementById('previewCanvas');
@@ -1085,6 +1085,7 @@
     previewCard.style.display = 'none';
     formCard.style.display = 'none';
     actionCard.style.display = 'none';
+    logCard.style.display = 'none';
     stepIndicator.textContent = 'KROK 1/3';
     previewPdfBtn.style.display = 'none';
     pdfPreviewWrap.style.display = 'none';
@@ -1122,6 +1123,7 @@
     previewCard.style.display = 'none';
     formCard.style.display = 'none';
     actionCard.style.display = 'none';
+    logCard.style.display = 'none';
     introNote.style.display = 'none';
     captureSection.style.display = 'none';
     cropSection.style.display = '';
@@ -1433,6 +1435,7 @@
     previewCard.style.display = '';
     formCard.style.display = '';
     actionCard.style.display = '';
+    logCard.style.display = '';
     stepIndicator.textContent = pages.length > 0 ? `KROK 2/3 · STRONA ${pages.length + 1}` : 'KROK 2/3';
     contrastSlider.value = 0;
     contrastValue.textContent = '0';
