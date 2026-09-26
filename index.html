@@ -549,6 +549,23 @@
       <input type="email" id="emailAddressInput" placeholder="np. jan.kowalski@firma.pl">
     </div>
 
+    <label style="margin-top:20px;">Microsoft (OneDrive / Outlook)</label>
+    <button type="button" class="secondary-btn" id="msLoginBtn" style="margin-top:0;">Zaloguj przez Microsoft</button>
+    <p class="crop-hint" id="msAccountText" style="display:none;"></p>
+
+    <div class="toggle-row" id="oneDriveToggleRow" style="display:none;">
+      <p class="label-text">Wyślij kopię do OneDrive</p>
+      <label class="switch">
+        <input type="checkbox" id="oneDriveToggle">
+        <span class="track"></span>
+      </label>
+    </div>
+    <div id="oneDriveFolderRow" style="display:none;">
+      <label for="oneDriveFolderInput">Folder na OneDrive</label>
+      <input type="text" id="oneDriveFolderInput" placeholder="np. Skaner dokumentow">
+      <p class="crop-hint" style="text-align:left; margin-top:6px;">W tym folderze będą też zapisywane PDF-y i dziennik .xlsx.</p>
+    </div>
+
     <div class="filename-stub">
       <span class="fx-label">NAZWA PLIKU →</span>
       <span class="fx-name" id="filenamePreview">—</span>
@@ -599,10 +616,6 @@
   <!-- ACTION -->
   <div id="actionCard" style="display:none;">
     <button type="button" class="primary-btn" id="generateBtn">Generuj PDF i zapisz</button>
-    <div class="split-row">
-      <button type="button" class="primary-btn" id="linkLogFileBtn">Połącz plik .xlsx</button>
-      <button type="button" class="secondary-btn" id="unlinkLogFileBtn">Odłącz plik</button>
-    </div>
     <p class="status" id="statusMsg"></p>
     <button type="button" class="primary-btn" id="previewPdfBtn" style="display:none; margin-top:10px;">Otwórz podgląd PDF</button>
     <p class="crop-hint" id="pagesNote" style="display:none;"></p>
@@ -615,6 +628,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@azure/[email protected]/lib/msal-browser.min.js"></script>
 <script>
 (function () {
   "use strict";
@@ -783,59 +797,14 @@
     });
   });
   const statusMsg = document.getElementById('statusMsg');
-  const linkLogFileBtn = document.getElementById('linkLogFileBtn');
-  const unlinkLogFileBtn = document.getElementById('unlinkLogFileBtn');
 
-  // ---------- dziennik zapisów (Excel) ----------
+  // ---------- dziennik zapisów (Excel) - lokalny zapas na wypadek braku logowania Microsoft ----------
   const LOG_HEADERS = ['Data zapisu', 'Plik', 'Nazwa', 'Opis', 'Płatność', 'Liczba stron'];
   const LOCAL_LOG_KEY = 'skanerLogEntries';
-  let logFileHandle = null;
 
-  const supportsFSA = 'showSaveFilePicker' in window && (() => {
+  const isTopLevel = (() => {
     try { return window.self === window.top; } catch (e) { return false; }
   })();
-
-  function idbOpen() {
-    return new Promise((resolve, reject) => {
-      const req = indexedDB.open('skanerDokDB', 1);
-      req.onupgradeneeded = () => req.result.createObjectStore('handles');
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
-    });
-  }
-  async function idbSaveHandle(handle) {
-    try {
-      const db = await idbOpen();
-      await new Promise((res, rej) => {
-        const tx = db.transaction('handles', 'readwrite');
-        tx.objectStore('handles').put(handle, 'logFile');
-        tx.oncomplete = res;
-        tx.onerror = () => rej(tx.error);
-      });
-    } catch (e) { /* IndexedDB niedostepny - po prostu nie zapamietamy pliku miedzy sesjami */ }
-  }
-  async function idbLoadHandle() {
-    try {
-      const db = await idbOpen();
-      return await new Promise((res, rej) => {
-        const tx = db.transaction('handles', 'readonly');
-        const req = tx.objectStore('handles').get('logFile');
-        req.onsuccess = () => res(req.result || null);
-        req.onerror = () => rej(req.error);
-      });
-    } catch (e) { return null; }
-  }
-  async function idbDeleteHandle() {
-    try {
-      const db = await idbOpen();
-      await new Promise((res, rej) => {
-        const tx = db.transaction('handles', 'readwrite');
-        tx.objectStore('handles').delete('logFile');
-        tx.oncomplete = res;
-        tx.onerror = () => rej(tx.error);
-      });
-    } catch (e) { /* IndexedDB niedostepny */ }
-  }
 
   function appendLocalLogEntry(row) {
     try {
@@ -847,74 +816,203 @@
     } catch (e) { /* localStorage niedostepny */ }
   }
 
-  async function appendRowToLogFile(row) {
-    if (!logFileHandle) return;
-    if ((await logFileHandle.queryPermission({ mode: 'readwrite' })) !== 'granted') {
-      if ((await logFileHandle.requestPermission({ mode: 'readwrite' })) !== 'granted') {
-        throw new Error('Brak uprawnien do pliku dziennika.');
-      }
+  // ---------- Microsoft (OneDrive / Outlook przez Graph API) ----------
+  const MS_CLIENT_ID = '380216a8-e5e3-4253-b62a-c1a9c36470c7';
+  const msLoginBtn = document.getElementById('msLoginBtn');
+  const msAccountText = document.getElementById('msAccountText');
+  const oneDriveToggleRow = document.getElementById('oneDriveToggleRow');
+  const oneDriveToggle = document.getElementById('oneDriveToggle');
+  const oneDriveFolderRow = document.getElementById('oneDriveFolderRow');
+  const oneDriveFolderInput = document.getElementById('oneDriveFolderInput');
+  const ONEDRIVE_FOLDER_KEY = 'skanerOneDriveFolder';
+  const ONEDRIVE_DEFAULT_FOLDER = 'Skaner dokumentow';
+
+  let msalInstance = null;
+  let msalAccount = null;
+  const supportsMSAL = isTopLevel && typeof window.msal !== 'undefined';
+
+  try {
+    if (localStorage.getItem('skanerOneDriveEnabled') === 'true') oneDriveToggle.checked = true;
+    oneDriveFolderInput.value = localStorage.getItem(ONEDRIVE_FOLDER_KEY) || ONEDRIVE_DEFAULT_FOLDER;
+  } catch (e) { oneDriveFolderInput.value = ONEDRIVE_DEFAULT_FOLDER; }
+
+  function updateOneDriveFolderVisibility() {
+    oneDriveFolderRow.style.display = (oneDriveToggleRow.style.display !== 'none' && oneDriveToggle.checked) ? '' : 'none';
+  }
+
+  oneDriveToggle.addEventListener('change', () => {
+    try { localStorage.setItem('skanerOneDriveEnabled', String(oneDriveToggle.checked)); } catch (e) {}
+    updateOneDriveFolderVisibility();
+  });
+  const saveOneDriveFolder = () => {
+    try { localStorage.setItem(ONEDRIVE_FOLDER_KEY, oneDriveFolderInput.value.trim() || ONEDRIVE_DEFAULT_FOLDER); } catch (e) {}
+  };
+  oneDriveFolderInput.addEventListener('input', saveOneDriveFolder);
+  oneDriveFolderInput.addEventListener('change', saveOneDriveFolder);
+
+  function getOneDriveFolder() {
+    const raw = (oneDriveFolderInput.value || ONEDRIVE_DEFAULT_FOLDER).trim() || ONEDRIVE_DEFAULT_FOLDER;
+    return raw.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+  }
+
+  function updateMsButton() {
+    if (!supportsMSAL) {
+      msLoginBtn.textContent = 'Logowanie Microsoft niedostępne tutaj';
+      msLoginBtn.disabled = true;
+      msAccountText.style.display = 'none';
+      oneDriveToggleRow.style.display = 'none';
+      updateOneDriveFolderVisibility();
+      return;
     }
-    const file = await logFileHandle.getFile();
-    let rows = [LOG_HEADERS];
-    if (file.size > 0) {
+    if (msalAccount) {
+      msLoginBtn.textContent = 'Wyloguj z Microsoft';
+      msAccountText.textContent = `Zalogowano jako: ${msalAccount.username}`;
+      msAccountText.style.display = '';
+      oneDriveToggleRow.style.display = '';
+    } else {
+      msLoginBtn.textContent = 'Zaloguj przez Microsoft';
+      msAccountText.style.display = 'none';
+      oneDriveToggleRow.style.display = 'none';
+    }
+    updateOneDriveFolderVisibility();
+  }
+
+  (async () => {
+    if (!supportsMSAL) { updateMsButton(); return; }
+    try {
+      msalInstance = new window.msal.PublicClientApplication({
+        auth: {
+          clientId: MS_CLIENT_ID,
+          authority: 'https://login.microsoftonline.com/common',
+          redirectUri: window.location.origin + window.location.pathname
+        },
+        cache: { cacheLocation: 'localStorage' }
+      });
+      await msalInstance.initialize();
+      const accounts = msalInstance.getAllAccounts();
+      if (accounts.length > 0) {
+        msalAccount = accounts[0];
+        msalInstance.setActiveAccount(msalAccount);
+      }
+    } catch (e) { /* MSAL nie zaladowal sie poprawnie - przycisk zostanie wylaczony ponizej */ }
+    updateMsButton();
+  })();
+
+  msLoginBtn.addEventListener('click', async () => {
+    if (!supportsMSAL || !msalInstance) return;
+    if (msalAccount) {
+      msalAccount = null;
+      msalInstance.setActiveAccount(null);
+      updateMsButton();
+      return;
+    }
+    try {
+      const result = await msalInstance.loginPopup({ scopes: ['Files.ReadWrite', 'Mail.Send'] });
+      msalAccount = result.account;
+      msalInstance.setActiveAccount(msalAccount);
+      updateMsButton();
+    } catch (e) {
+      showStatus('Logowanie Microsoft nie powiodło się.', 'err');
+    }
+  });
+
+  async function getMsToken(scopes) {
+    if (!msalInstance || !msalAccount) return null;
+    try {
+      const res = await msalInstance.acquireTokenSilent({ scopes, account: msalAccount });
+      return res.accessToken;
+    } catch (e) {
       try {
-        const buf = await file.arrayBuffer();
+        const res = await msalInstance.acquireTokenPopup({ scopes });
+        return res.accessToken;
+      } catch (e2) { return null; }
+    }
+  }
+
+  async function uploadToOneDrive(filename, blob) {
+    const token = await getMsToken(['Files.ReadWrite']);
+    if (!token) throw new Error('Brak tokenu OneDrive');
+    const folder = getOneDriveFolder();
+    const safeName = encodeURIComponent(filename);
+    const res = await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${folder}/${safeName}:/content`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/pdf' },
+      body: blob
+    });
+    if (!res.ok) throw new Error('Upload OneDrive nieudany: ' + res.status);
+  }
+
+  // Dziennik .xlsx trzymany bezpośrednio w tym samym folderze OneDrive co PDF-y (odczyt-dopisz-zapis przez Graph API)
+  async function appendRowToOneDriveLog(row) {
+    const token = await getMsToken(['Files.ReadWrite']);
+    if (!token) throw new Error('Brak tokenu OneDrive');
+    const folder = getOneDriveFolder();
+    const logPath = `${folder}/dziennik-skanera.xlsx`;
+
+    let rows = [LOG_HEADERS];
+    const getRes = await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${logPath}:/content`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (getRes.ok) {
+      try {
+        const buf = await getRes.arrayBuffer();
         const wb = XLSX.read(buf, { type: 'array' });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const existing = XLSX.utils.sheet_to_json(ws, { header: 1 });
         if (existing.length) rows = existing;
-      } catch (e) { /* nie udalo sie odczytac istniejacej tresci */ }
+      } catch (e) { /* nie udało się odczytać istniejącej treści - zaczynamy od nagłówków */ }
+    } else if (getRes.status !== 404) {
+      throw new Error('Odczyt dziennika OneDrive nieudany: ' + getRes.status);
     }
+
     rows.push([row.savedAt, row.filename, row.nazwa, row.opis, row.category, row.pages]);
     const ws2 = XLSX.utils.aoa_to_sheet(rows);
     const wb2 = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb2, ws2, 'Dziennik');
     const out = XLSX.write(wb2, { type: 'array', bookType: 'xlsx' });
-    const writable = await logFileHandle.createWritable();
-    await writable.write(out);
-    await writable.close();
+
+    const putRes = await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${logPath}:/content`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
+      body: out
+    });
+    if (!putRes.ok) throw new Error('Zapis dziennika OneDrive nieudany: ' + putRes.status);
   }
 
-  function updateLogButton() {
-    if (!supportsFSA) {
-      linkLogFileBtn.textContent = 'Plik .xlsx niedostępny tutaj';
-      linkLogFileBtn.disabled = true;
-      unlinkLogFileBtn.disabled = true;
-    } else if (logFileHandle) {
-      linkLogFileBtn.textContent = `Połączono: ${logFileHandle.name}`;
-      unlinkLogFileBtn.disabled = false;
-    } else {
-      linkLogFileBtn.textContent = 'Połącz plik .xlsx';
-      unlinkLogFileBtn.disabled = true;
-    }
+  function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
   }
-  updateLogButton();
 
-  (async () => {
-    if (supportsFSA) {
-      const h = await idbLoadHandle();
-      if (h) { logFileHandle = h; updateLogButton(); }
-    }
-  })();
+  async function sendMailGraph(filename, blob, toAddress) {
+    const token = await getMsToken(['Mail.Send']);
+    if (!token) throw new Error('Brak tokenu Mail.Send');
+    const contentBytes = await blobToBase64(blob);
+    const message = {
+      message: {
+        subject: `Skan: ${filename}`,
+        body: { contentType: 'Text', content: `W załączniku: ${filename}` },
+        toRecipients: [{ emailAddress: { address: toAddress } }],
+        attachments: [{
+          '@odata.type': '#microsoft.graph.fileAttachment',
+          name: filename,
+          contentType: 'application/pdf',
+          contentBytes
+        }]
+      }
+    };
+    const res = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(message)
+    });
+    if (!res.ok) throw new Error('Wysyłka Graph nieudana: ' + res.status);
+  }
 
-  linkLogFileBtn.addEventListener('click', async () => {
-    if (!supportsFSA) return;
-    try {
-      const handle = await window.showSaveFilePicker({
-        suggestedName: 'dziennik-skanera.xlsx',
-        types: [{ description: 'Excel', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }]
-      });
-      logFileHandle = handle;
-      await idbSaveHandle(handle);
-      updateLogButton();
-    } catch (e) { /* uzytkownik anulowal wybor */ }
-  });
-
-  unlinkLogFileBtn.addEventListener('click', async () => {
-    logFileHandle = null;
-    await idbDeleteHandle();
-    updateLogButton();
-  });
   const previewPdfBtn = document.getElementById('previewPdfBtn');
   const pdfPreviewWrap = document.getElementById('pdfPreviewWrap');
   const pdfPreviewCanvas = document.getElementById('pdfPreviewCanvas');
@@ -1752,12 +1850,25 @@
           savedAt, filename, nazwa, opis, category: selectedCategory || '', pages: allPages.length
         };
         appendLocalLogEntry(logRow);
-        if (logFileHandle) {
-          appendRowToLogFile(logRow).catch(() => {
-            showStatus('Zapisano PDF, ale nie udało się dopisać do pliku dziennika.', 'err');
+        if (emailToggle.checked) {
+          const addr = emailAddressInput.value.trim();
+          const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr);
+          if (msalAccount && emailValid) {
+            sendMailGraph(filename, blob, addr)
+              .then(() => showStatus(`Zapisano i wysłano e-mailem: ${filename}`, 'ok'))
+              .catch(() => openEmailDraft(filename)); // nie udało się przez Graph - zostaw szkic jako zapasową opcję
+          } else {
+            openEmailDraft(filename);
+          }
+        }
+        if (oneDriveToggle.checked && msalAccount) {
+          uploadToOneDrive(filename, blob).catch(() => {
+            showStatus('Zapisano lokalnie, ale nie udało się wysłać do OneDrive.', 'err');
+          });
+          appendRowToOneDriveLog(logRow).catch(() => {
+            showStatus('Zapisano lokalnie, ale nie udało się dopisać do dziennika na OneDrive.', 'err');
           });
         }
-        if (emailToggle.checked) openEmailDraft(filename);
         return;
       } else {
         showStatus('Nie udało się zapisać pliku. Spróbuj ponownie.', 'err');
