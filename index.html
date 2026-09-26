@@ -373,6 +373,8 @@
     cursor: pointer;
   }
   .secondary-btn:active { background: var(--rule); }
+  .secondary-btn[aria-pressed="true"] { background: var(--stamp); color: var(--stamp-ink); }
+  .secondary-btn[aria-pressed="true"]:active { background: var(--stamp-dark); }
 
   .split-row { display: flex; gap: 10px; margin-top: 12px; }
   .split-row .primary-btn, .split-row .secondary-btn { margin-top: 0; flex: 1; }
@@ -549,33 +551,26 @@
       <input type="email" id="emailAddressInput" placeholder="np. jan.kowalski@firma.pl">
     </div>
 
-    <label style="margin-top:20px;">Microsoft (OneDrive / Outlook)</label>
-    <button type="button" class="secondary-btn" id="msLoginBtn" style="margin-top:0;">Zaloguj przez Microsoft</button>
-    <p class="crop-hint" id="msAccountText" style="display:none;"></p>
-
-    <div class="toggle-row" id="oneDriveToggleRow" style="display:none;">
-      <p class="label-text">Wyślij kopię do OneDrive</p>
-      <label class="switch">
-        <input type="checkbox" id="oneDriveToggle">
-        <span class="track"></span>
-      </label>
-    </div>
-    <div id="oneDriveFolderRow" style="display:none;">
-      <label for="oneDriveFolderInput">Folder na OneDrive</label>
-      <input type="text" id="oneDriveFolderInput" placeholder="np. Skaner dokumentow">
-      <p class="crop-hint" style="text-align:left; margin-top:6px;">W tym folderze będą też zapisywane PDF-y i dziennik .xlsx.</p>
-    </div>
-
-    <div class="filename-stub">
-      <span class="fx-label">NAZWA PLIKU →</span>
-      <span class="fx-name" id="filenamePreview">—</span>
-    </div>
-
     <div class="category-row" id="categoryRow" style="margin-top:16px;">
       <button type="button" class="cat-btn" data-category="Karta PJ" aria-pressed="false">Karta PJ</button>
       <button type="button" class="cat-btn" data-category="Cash PJ" aria-pressed="false">Cash PJ</button>
       <button type="button" class="cat-btn" data-category="Karta PJB" aria-pressed="false">Karta PJB</button>
       <button type="button" class="cat-btn" data-category="Karta M2M" aria-pressed="false">Karta M2M</button>
+    </div>
+
+    <label style="margin-top:20px;">Zapisywanie po wygenerowaniu PDF</label>
+    <button type="button" class="secondary-btn" id="localSaveToggleBtn" aria-pressed="true" style="margin-top:0;">Zapis w telefonie</button>
+    <button type="button" class="secondary-btn" id="msSaveToggleBtn" aria-pressed="false">Microsoft</button>
+    <p class="crop-hint" id="msAccountText" style="display:none;"></p>
+    <div id="oneDriveFolderRow" style="display:none;">
+      <label for="oneDriveFolderInput">Folder na OneDrive</label>
+      <input type="text" id="oneDriveFolderInput" placeholder="np. Skaner dokumentow">
+      <p class="crop-hint" style="text-align:left; margin-top:6px;">W tym folderze będą zapisywane PDF-y i dziennik .xlsx (dziennik dotyczy tylko zapisu przez Microsoft).</p>
+    </div>
+
+    <div class="filename-stub">
+      <span class="fx-label">NAZWA PLIKU →</span>
+      <span class="fx-name" id="filenamePreview">—</span>
     </div>
   </div>
 
@@ -628,7 +623,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@azure/[email protected]/lib/msal-browser.min.js"></script>
+<script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
 <script>
 (function () {
   "use strict";
@@ -818,32 +813,47 @@
 
   // ---------- Microsoft (OneDrive / Outlook przez Graph API) ----------
   const MS_CLIENT_ID = '380216a8-e5e3-4253-b62a-c1a9c36470c7';
-  const msLoginBtn = document.getElementById('msLoginBtn');
+  const msSaveToggleBtn = document.getElementById('msSaveToggleBtn');
+  const localSaveToggleBtn = document.getElementById('localSaveToggleBtn');
   const msAccountText = document.getElementById('msAccountText');
-  const oneDriveToggleRow = document.getElementById('oneDriveToggleRow');
-  const oneDriveToggle = document.getElementById('oneDriveToggle');
   const oneDriveFolderRow = document.getElementById('oneDriveFolderRow');
   const oneDriveFolderInput = document.getElementById('oneDriveFolderInput');
   const ONEDRIVE_FOLDER_KEY = 'skanerOneDriveFolder';
   const ONEDRIVE_DEFAULT_FOLDER = 'Skaner dokumentow';
+  const ONEDRIVE_ENABLED_KEY = 'skanerOneDriveEnabled';
+  const LOCAL_SAVE_ENABLED_KEY = 'skanerLocalSaveEnabled';
 
   let msalInstance = null;
   let msalAccount = null;
   const supportsMSAL = isTopLevel && typeof window.msal !== 'undefined';
 
+  // "Zapis w telefonie" - domyślnie włączony
   try {
-    if (localStorage.getItem('skanerOneDriveEnabled') === 'true') oneDriveToggle.checked = true;
+    const savedLocal = localStorage.getItem(LOCAL_SAVE_ENABLED_KEY);
+    localSaveToggleBtn.setAttribute('aria-pressed', savedLocal === null ? 'true' : String(savedLocal === 'true'));
+  } catch (e) { localSaveToggleBtn.setAttribute('aria-pressed', 'true'); }
+
+  localSaveToggleBtn.addEventListener('click', () => {
+    const next = localSaveToggleBtn.getAttribute('aria-pressed') !== 'true';
+    localSaveToggleBtn.setAttribute('aria-pressed', String(next));
+    try { localStorage.setItem(LOCAL_SAVE_ENABLED_KEY, String(next)); } catch (e) {}
+  });
+
+  try {
     oneDriveFolderInput.value = localStorage.getItem(ONEDRIVE_FOLDER_KEY) || ONEDRIVE_DEFAULT_FOLDER;
   } catch (e) { oneDriveFolderInput.value = ONEDRIVE_DEFAULT_FOLDER; }
 
   function updateOneDriveFolderVisibility() {
-    oneDriveFolderRow.style.display = (oneDriveToggleRow.style.display !== 'none' && oneDriveToggle.checked) ? '' : 'none';
+    const enabled = msSaveToggleBtn.getAttribute('aria-pressed') === 'true';
+    oneDriveFolderRow.style.display = enabled ? '' : 'none';
+    if (enabled && msalAccount) {
+      msAccountText.textContent = `Zalogowano jako: ${msalAccount.username}`;
+      msAccountText.style.display = '';
+    } else {
+      msAccountText.style.display = 'none';
+    }
   }
 
-  oneDriveToggle.addEventListener('change', () => {
-    try { localStorage.setItem('skanerOneDriveEnabled', String(oneDriveToggle.checked)); } catch (e) {}
-    updateOneDriveFolderVisibility();
-  });
   const saveOneDriveFolder = () => {
     try { localStorage.setItem(ONEDRIVE_FOLDER_KEY, oneDriveFolderInput.value.trim() || ONEDRIVE_DEFAULT_FOLDER); } catch (e) {}
   };
@@ -855,30 +865,19 @@
     return raw.split('/').filter(Boolean).map(encodeURIComponent).join('/');
   }
 
-  function updateMsButton() {
-    if (!supportsMSAL) {
-      msLoginBtn.textContent = 'Logowanie Microsoft niedostępne tutaj';
-      msLoginBtn.disabled = true;
-      msAccountText.style.display = 'none';
-      oneDriveToggleRow.style.display = 'none';
-      updateOneDriveFolderVisibility();
-      return;
-    }
-    if (msalAccount) {
-      msLoginBtn.textContent = 'Wyloguj z Microsoft';
-      msAccountText.textContent = `Zalogowano jako: ${msalAccount.username}`;
-      msAccountText.style.display = '';
-      oneDriveToggleRow.style.display = '';
-    } else {
-      msLoginBtn.textContent = 'Zaloguj przez Microsoft';
-      msAccountText.style.display = 'none';
-      oneDriveToggleRow.style.display = 'none';
-    }
+  function setMsEnabled(enabled) {
+    msSaveToggleBtn.setAttribute('aria-pressed', String(enabled));
+    try { localStorage.setItem(ONEDRIVE_ENABLED_KEY, String(enabled)); } catch (e) {}
     updateOneDriveFolderVisibility();
   }
 
   (async () => {
-    if (!supportsMSAL) { updateMsButton(); return; }
+    if (!supportsMSAL) {
+      msSaveToggleBtn.textContent = 'Microsoft niedostępne tutaj';
+      msSaveToggleBtn.disabled = true;
+      updateOneDriveFolderVisibility();
+      return;
+    }
     try {
       msalInstance = new window.msal.PublicClientApplication({
         auth: {
@@ -893,27 +892,32 @@
       if (accounts.length > 0) {
         msalAccount = accounts[0];
         msalInstance.setActiveAccount(msalAccount);
+        let wantEnabled = true;
+        try { wantEnabled = localStorage.getItem(ONEDRIVE_ENABLED_KEY) !== 'false'; } catch (e) {}
+        if (wantEnabled) setMsEnabled(true);
       }
     } catch (e) { /* MSAL nie zaladowal sie poprawnie - przycisk zostanie wylaczony ponizej */ }
-    updateMsButton();
+    updateOneDriveFolderVisibility();
   })();
 
-  msLoginBtn.addEventListener('click', async () => {
-    if (!supportsMSAL || !msalInstance) return;
-    if (msalAccount) {
-      msalAccount = null;
-      msalInstance.setActiveAccount(null);
-      updateMsButton();
+  msSaveToggleBtn.addEventListener('click', async () => {
+    if (!supportsMSAL) return;
+    const currentlyOn = msSaveToggleBtn.getAttribute('aria-pressed') === 'true';
+    if (currentlyOn) {
+      setMsEnabled(false);
       return;
     }
-    try {
-      const result = await msalInstance.loginPopup({ scopes: ['Files.ReadWrite', 'Mail.Send'] });
-      msalAccount = result.account;
-      msalInstance.setActiveAccount(msalAccount);
-      updateMsButton();
-    } catch (e) {
-      showStatus('Logowanie Microsoft nie powiodło się.', 'err');
+    if (!msalAccount) {
+      try {
+        const result = await msalInstance.loginPopup({ scopes: ['Files.ReadWrite', 'Mail.Send'] });
+        msalAccount = result.account;
+        msalInstance.setActiveAccount(msalAccount);
+      } catch (e) {
+        showStatus('Logowanie Microsoft nie powiodło się.', 'err');
+        return;
+      }
     }
+    setMsEnabled(true);
   });
 
   async function getMsToken(scopes) {
@@ -1838,9 +1842,35 @@
         isMulti, pageIndex: allPages.length, pageTotal: allPages.length, category: selectedCategory
       });
 
-      const saved = await saveFile(filename, blob);
-      if (saved) {
-        showStatus(`Zapisano: ${filename}${isMulti ? ` (${allPages.length} str.)` : ''}`, 'ok');
+      const localSaveEnabled = localSaveToggleBtn.getAttribute('aria-pressed') === 'true';
+      const msSaveEnabled = supportsMSAL && msSaveToggleBtn.getAttribute('aria-pressed') === 'true' && !!msalAccount;
+
+      if (!localSaveEnabled && !msSaveEnabled) {
+        showStatus('Włącz przynajmniej jedną opcję zapisu (telefon lub Microsoft).', 'err');
+        generateBtn.disabled = false;
+        return;
+      }
+
+      const savedParts = [];
+      let localOk = true;
+      if (localSaveEnabled) {
+        localOk = await saveFile(filename, blob);
+        if (localOk) savedParts.push('telefon');
+      }
+
+      let msOk = false;
+      if (msSaveEnabled) {
+        try {
+          await uploadToOneDrive(filename, blob);
+          msOk = true;
+          savedParts.push('OneDrive');
+        } catch (e) {
+          showStatus('Nie udało się wysłać do OneDrive.', 'err');
+        }
+      }
+
+      if ((localSaveEnabled && localOk) || (msSaveEnabled && msOk)) {
+        showStatus(`Zapisano (${savedParts.join(' + ')}): ${filename}${isMulti ? ` (${allPages.length} str.)` : ''}`, 'ok');
         generateBtn.textContent = 'Zrób nowy skan';
         generateBtn.classList.add('is-done');
         generateBtn.dataset.mode = 'reset';
@@ -1861,12 +1891,9 @@
             openEmailDraft(filename);
           }
         }
-        if (oneDriveToggle.checked && msalAccount) {
-          uploadToOneDrive(filename, blob).catch(() => {
-            showStatus('Zapisano lokalnie, ale nie udało się wysłać do OneDrive.', 'err');
-          });
+        if (msSaveEnabled && msOk) {
           appendRowToOneDriveLog(logRow).catch(() => {
-            showStatus('Zapisano lokalnie, ale nie udało się dopisać do dziennika na OneDrive.', 'err');
+            showStatus('Zapisano, ale nie udało się dopisać do dziennika na OneDrive.', 'err');
           });
         }
         return;
