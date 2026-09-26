@@ -563,8 +563,20 @@
     <button type="button" class="secondary-btn" id="msSaveToggleBtn" aria-pressed="false">Zapis OneDrive</button>
     <p class="crop-hint" id="msAccountText" style="display:none;"></p>
     <div id="oneDriveFolderRow" style="display:none;">
-      <label for="oneDriveFolderInput">Folder na OneDrive</label>
-      <input type="text" id="oneDriveFolderInput" placeholder="np. Skaner dokumentow">
+      <label>Folder na OneDrive</label>
+      <button type="button" class="secondary-btn" id="oneDriveFolderDisplayBtn" style="margin-top:0; text-align:left;">📁 Skaner dokumentow</button>
+
+      <div id="oneDrivePickerPanel" style="display:none; margin-top:10px; border:1px solid var(--rule); border-radius:12px; padding:12px; background:var(--paper-raised);">
+        <p class="crop-hint" id="pickerPathText" style="margin:0 0 10px; text-align:left;">Dysk główny</p>
+        <div id="pickerList" style="max-height:240px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;"></div>
+        <div class="split-row" style="margin-top:10px;">
+          <button type="button" class="secondary-btn" id="pickerUpBtn" style="margin-top:0;">↑ W górę</button>
+          <button type="button" class="secondary-btn" id="pickerNewFolderBtn" style="margin-top:0;">+ Nowy folder</button>
+        </div>
+        <button type="button" class="primary-btn" id="pickerSelectBtn" style="margin-top:10px;">Wybierz ten folder</button>
+        <button type="button" class="retake" id="pickerCancelBtn">Anuluj</button>
+      </div>
+
       <p class="crop-hint" style="text-align:left; margin-top:6px;">W tym folderze będą zapisywane PDF-y i dziennik .xlsx (dziennik dotyczy tylko zapisu przez Microsoft).</p>
     </div>
 
@@ -828,7 +840,14 @@
   const localSaveToggleBtn = document.getElementById('localSaveToggleBtn');
   const msAccountText = document.getElementById('msAccountText');
   const oneDriveFolderRow = document.getElementById('oneDriveFolderRow');
-  const oneDriveFolderInput = document.getElementById('oneDriveFolderInput');
+  const oneDriveFolderDisplayBtn = document.getElementById('oneDriveFolderDisplayBtn');
+  const oneDrivePickerPanel = document.getElementById('oneDrivePickerPanel');
+  const pickerPathText = document.getElementById('pickerPathText');
+  const pickerList = document.getElementById('pickerList');
+  const pickerUpBtn = document.getElementById('pickerUpBtn');
+  const pickerNewFolderBtn = document.getElementById('pickerNewFolderBtn');
+  const pickerSelectBtn = document.getElementById('pickerSelectBtn');
+  const pickerCancelBtn = document.getElementById('pickerCancelBtn');
   const ONEDRIVE_FOLDER_KEY = 'skanerOneDriveFolder';
   const ONEDRIVE_DEFAULT_FOLDER = 'Skaner dokumentow';
   const ONEDRIVE_ENABLED_KEY = 'skanerOneDriveEnabled';
@@ -850,13 +869,33 @@
     try { localStorage.setItem(LOCAL_SAVE_ENABLED_KEY, String(next)); } catch (e) {}
   });
 
-  try {
-    oneDriveFolderInput.value = localStorage.getItem(ONEDRIVE_FOLDER_KEY) || ONEDRIVE_DEFAULT_FOLDER;
-  } catch (e) { oneDriveFolderInput.value = ONEDRIVE_DEFAULT_FOLDER; }
+  function folderDisplayLabel(path) {
+    return path ? path : 'Dysk główny (bez podfolderu)';
+  }
+
+  function getOneDriveFolderSegments() {
+    let raw;
+    try { raw = localStorage.getItem(ONEDRIVE_FOLDER_KEY); } catch (e) { raw = null; }
+    if (raw === null) raw = ONEDRIVE_DEFAULT_FOLDER; // nic jeszcze nie wybrano - domyślny folder
+    return raw.split('/').map(s => s.trim()).filter(Boolean);
+  }
+
+  function getOneDriveFolder() {
+    return getOneDriveFolderSegments().map(encodeURIComponent).join('/');
+  }
+
+  function setSelectedOneDriveFolder(rawPath) {
+    oneDriveFolderDisplayBtn.textContent = '📁 ' + folderDisplayLabel(rawPath);
+    try { localStorage.setItem(ONEDRIVE_FOLDER_KEY, rawPath); } catch (e) {}
+  }
+
+  // ustaw początkowy napis przycisku na podstawie zapamiętanego wyboru
+  oneDriveFolderDisplayBtn.textContent = '📁 ' + folderDisplayLabel(getOneDriveFolderSegments().join('/'));
 
   function updateOneDriveFolderVisibility() {
     const enabled = msSaveToggleBtn.getAttribute('aria-pressed') === 'true';
     oneDriveFolderRow.style.display = enabled ? '' : 'none';
+    if (!enabled) oneDrivePickerPanel.style.display = 'none';
     if (enabled && msalAccount) {
       msAccountText.textContent = `Zalogowano jako: ${msalAccount.username}`;
       msAccountText.style.display = '';
@@ -865,24 +904,93 @@
     }
   }
 
-  const saveOneDriveFolder = () => {
-    try { localStorage.setItem(ONEDRIVE_FOLDER_KEY, oneDriveFolderInput.value.trim() || ONEDRIVE_DEFAULT_FOLDER); } catch (e) {}
-  };
-  oneDriveFolderInput.addEventListener('input', saveOneDriveFolder);
-  oneDriveFolderInput.addEventListener('change', saveOneDriveFolder);
+  // ---------- przeglądarka folderów OneDrive ----------
+  let pickerSegments = []; // ścieżka aktualnie przeglądana w oknie wyboru
 
-  function getOneDriveFolderSegments() {
-    const raw = (oneDriveFolderInput.value || ONEDRIVE_DEFAULT_FOLDER).trim() || ONEDRIVE_DEFAULT_FOLDER;
-    return raw.split('/').map(s => s.trim()).filter(Boolean);
+  function pickerPath() {
+    return pickerSegments.map(encodeURIComponent).join('/');
   }
 
-  function getOneDriveFolder() {
-    return getOneDriveFolderSegments().map(encodeURIComponent).join('/');
+  async function refreshPickerList() {
+    pickerPathText.textContent = pickerSegments.length ? pickerSegments.join(' / ') : 'Dysk główny';
+    pickerUpBtn.disabled = pickerSegments.length === 0;
+    pickerList.innerHTML = '<p class="crop-hint" style="margin:0;">Ładowanie…</p>';
+    try {
+      const token = await getMsToken(['Files.ReadWrite']);
+      if (!token) throw new Error('Brak tokenu');
+      const path = pickerPath();
+      const url = path
+        ? `https://graph.microsoft.com/v1.0/me/drive/root:/${path}:/children?$select=name,folder&$top=200`
+        : `https://graph.microsoft.com/v1.0/me/drive/root/children?$select=name,folder&$top=200`;
+      const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+      if (!res.ok) throw new Error('Błąd pobierania listy: ' + res.status);
+      const data = await res.json();
+      const folders = (data.value || []).filter(item => item.folder).sort((a, b) => a.name.localeCompare(b.name, 'pl'));
+      pickerList.innerHTML = '';
+      if (folders.length === 0) {
+        pickerList.innerHTML = '<p class="crop-hint" style="margin:0;">Brak podfolderów na tym poziomie.</p>';
+      }
+      folders.forEach(f => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'secondary-btn';
+        btn.style.marginTop = '0';
+        btn.style.textAlign = 'left';
+        btn.textContent = '📁 ' + f.name;
+        btn.addEventListener('click', () => {
+          pickerSegments.push(f.name);
+          refreshPickerList();
+        });
+        pickerList.appendChild(btn);
+      });
+    } catch (e) {
+      pickerList.innerHTML = '<p class="crop-hint" style="margin:0;">Nie udało się wczytać listy folderów.</p>';
+    }
   }
 
-  // Jawnie sprawdza/tworzy folder (i podfoldery) na OneDrive segment po segmencie,
-  // zamiast polegać na niejawnym auto-tworzeniu folderu przez PUT :/content, które
-  // bywa zawodne dla kont osobistych OneDrive.
+  oneDriveFolderDisplayBtn.addEventListener('click', () => {
+    pickerSegments = getOneDriveFolderSegments().slice();
+    oneDrivePickerPanel.style.display = '';
+    refreshPickerList();
+  });
+
+  pickerUpBtn.addEventListener('click', () => {
+    if (pickerSegments.length > 0) { pickerSegments.pop(); refreshPickerList(); }
+  });
+
+  pickerNewFolderBtn.addEventListener('click', async () => {
+    const name = window.prompt('Nazwa nowego folderu:');
+    if (!name || !name.trim()) return;
+    try {
+      const token = await getMsToken(['Files.ReadWrite']);
+      if (!token) throw new Error('Brak tokenu');
+      const path = pickerPath();
+      const url = path
+        ? `https://graph.microsoft.com/v1.0/me/drive/root:/${path}:/children`
+        : `https://graph.microsoft.com/v1.0/me/drive/root/children`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), folder: {}, '@microsoft.graph.conflictBehavior': 'rename' })
+      });
+      if (!res.ok) throw new Error('Nie udało się utworzyć folderu.');
+      await refreshPickerList();
+    } catch (e) {
+      showStatus('Nie udało się utworzyć nowego folderu na OneDrive.', 'err');
+    }
+  });
+
+  pickerSelectBtn.addEventListener('click', () => {
+    setSelectedOneDriveFolder(pickerSegments.join('/'));
+    oneDrivePickerPanel.style.display = 'none';
+  });
+
+  pickerCancelBtn.addEventListener('click', () => {
+    oneDrivePickerPanel.style.display = 'none';
+  });
+
+  // Jawnie sprawdza/tworzy wybrany folder (i podfoldery) segment po segmencie -
+  // zabezpieczenie na wypadek, gdyby folder został usunięty po jego wybraniu.
   async function ensureOneDriveFolder() {
     const token = await getMsToken(['Files.ReadWrite']);
     if (!token) throw new Error('Brak tokenu OneDrive');
@@ -986,7 +1094,8 @@
     if (!token) throw new Error('Brak tokenu OneDrive');
     const folder = getOneDriveFolder();
     const safeName = encodeURIComponent(filename);
-    const res = await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${folder}/${safeName}:/content`, {
+    const itemPath = folder ? `${folder}/${safeName}` : safeName;
+    const res = await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${itemPath}:/content`, {
       method: 'PUT',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/pdf' },
       body: blob
@@ -1000,7 +1109,7 @@
     const token = await getMsToken(['Files.ReadWrite']);
     if (!token) throw new Error('Brak tokenu OneDrive');
     const folder = getOneDriveFolder();
-    const logPath = `${folder}/dziennik-skanera.xlsx`;
+    const logPath = folder ? `${folder}/dziennik-skanera.xlsx` : 'dziennik-skanera.xlsx';
 
     let rows = [LOG_HEADERS];
     const getRes = await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${logPath}:/content`, {
