@@ -538,18 +538,7 @@
       </div>
     </div>
 
-    <div class="toggle-row">
-      <p class="label-text">Wyślij e-mailem</p>
-      <label class="switch">
-        <input type="checkbox" id="emailToggle">
-        <span class="track"></span>
-      </label>
-    </div>
-
-    <div id="emailAddressRow" style="display:none;">
-      <label for="emailAddressInput">Adres e-mail</label>
-      <input type="email" id="emailAddressInput" placeholder="np. jan.kowalski@firma.pl">
-    </div>
+    <button type="button" class="secondary-btn" id="emailToggleBtn" aria-pressed="false" style="margin-top:16px;">Wyślij e-mailem</button>
 
     <div class="category-row" id="categoryRow" style="margin-top:16px;">
       <button type="button" class="cat-btn" data-category="Karta PJ" aria-pressed="false">Karta PJ</button>
@@ -697,33 +686,81 @@
   const categoryBtns = document.querySelectorAll('.cat-btn');
   let selectedCategory = null;
 
-  // ---------- wysylanie e-mailem (szkic mailto) - ustawienia zapamietane trwale w tej przegladarce ----------
-  const emailToggle = document.getElementById('emailToggle');
-  const emailAddressRow = document.getElementById('emailAddressRow');
-  const emailAddressInput = document.getElementById('emailAddressInput');
+  // ---------- wysyłanie e-mailem (szkic mailto) - przycisk on/off jak zapis w telefonie/OneDrive ----------
+  const emailToggleBtn = document.getElementById('emailToggleBtn');
   const EMAIL_ENABLED_KEY = 'skanerEmailEnabled';
   const EMAIL_ADDRESS_KEY = 'skanerEmailAddress';
 
-  try {
-    if (localStorage.getItem(EMAIL_ENABLED_KEY) === 'true') emailToggle.checked = true;
-    const savedAddr = localStorage.getItem(EMAIL_ADDRESS_KEY);
-    if (savedAddr) emailAddressInput.value = savedAddr;
-  } catch (e) { /* localStorage niedostepny */ }
-  emailAddressRow.style.display = emailToggle.checked ? '' : 'none';
+  function getEmailAddress() {
+    try { return localStorage.getItem(EMAIL_ADDRESS_KEY) || ''; } catch (e) { return ''; }
+  }
+  function isValidEmail(addr) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr);
+  }
+  function updateEmailButton() {
+    const enabled = emailToggleBtn.getAttribute('aria-pressed') === 'true';
+    const addr = getEmailAddress();
+    emailToggleBtn.textContent = enabled && addr ? addr : 'Wyślij e-mailem';
+  }
+  function setEmailAddress(addr) {
+    try { localStorage.setItem(EMAIL_ADDRESS_KEY, addr); } catch (e) {}
+    updateEmailButton();
+  }
+  function setEmailEnabled(enabled) {
+    emailToggleBtn.setAttribute('aria-pressed', String(enabled));
+    try { localStorage.setItem(EMAIL_ENABLED_KEY, String(enabled)); } catch (e) {}
+    updateEmailButton();
+  }
 
-  emailToggle.addEventListener('change', () => {
-    emailAddressRow.style.display = emailToggle.checked ? '' : 'none';
-    try { localStorage.setItem(EMAIL_ENABLED_KEY, String(emailToggle.checked)); } catch (e) {}
+  try {
+    if (localStorage.getItem(EMAIL_ENABLED_KEY) === 'true' && getEmailAddress()) {
+      emailToggleBtn.setAttribute('aria-pressed', 'true');
+    }
+  } catch (e) {}
+  updateEmailButton();
+
+  function promptForEmailAddress() {
+    const next = window.prompt('Adres e-mail do wysyłki:', getEmailAddress());
+    if (next === null) return; // anulowano
+    const trimmed = next.trim();
+    if (!trimmed) return;
+    if (!isValidEmail(trimmed)) { showStatus('Niepoprawny adres e-mail.', 'err'); return; }
+    setEmailAddress(trimmed);
+  }
+
+  let emailLongPressTimer = null;
+  let emailLongPressFired = false;
+  const EMAIL_LONG_PRESS_MS = 550;
+
+  emailToggleBtn.addEventListener('pointerdown', () => {
+    emailLongPressFired = false;
+    emailLongPressTimer = setTimeout(() => {
+      emailLongPressFired = true;
+      if (navigator.vibrate) navigator.vibrate(15);
+      promptForEmailAddress();
+    }, EMAIL_LONG_PRESS_MS);
   });
-  const saveEmailAddress = () => {
-    try { localStorage.setItem(EMAIL_ADDRESS_KEY, emailAddressInput.value.trim()); } catch (e) {}
-  };
-  emailAddressInput.addEventListener('input', saveEmailAddress);
-  emailAddressInput.addEventListener('change', saveEmailAddress);
+  const cancelEmailLongPress = () => clearTimeout(emailLongPressTimer);
+  emailToggleBtn.addEventListener('pointerup', cancelEmailLongPress);
+  emailToggleBtn.addEventListener('pointerleave', cancelEmailLongPress);
+  emailToggleBtn.addEventListener('pointercancel', cancelEmailLongPress);
+
+  emailToggleBtn.addEventListener('click', () => {
+    if (emailLongPressFired) { emailLongPressFired = false; return; }
+    const currentlyOn = emailToggleBtn.getAttribute('aria-pressed') === 'true';
+    if (currentlyOn) { setEmailEnabled(false); return; }
+    if (!getEmailAddress()) {
+      const addr = window.prompt('Podaj adres e-mail do wysyłki:');
+      if (!addr || !addr.trim()) return;
+      if (!isValidEmail(addr.trim())) { showStatus('Niepoprawny adres e-mail.', 'err'); return; }
+      setEmailAddress(addr.trim());
+    }
+    setEmailEnabled(true);
+  });
 
   function openEmailDraft(fname) {
-    const addr = emailAddressInput.value.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr)) {
+    const addr = getEmailAddress();
+    if (!isValidEmail(addr)) {
       showStatus('Zapisano PDF, ale nie otwarto e-maila — sprawdź adres e-mail.', 'err');
       return;
     }
@@ -2050,9 +2087,9 @@
           savedAt, filename, nazwa, opis, category: selectedCategory || '', pages: allPages.length
         };
         appendLocalLogEntry(logRow);
-        if (emailToggle.checked) {
-          const addr = emailAddressInput.value.trim();
-          const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr);
+        if (emailToggleBtn.getAttribute('aria-pressed') === 'true') {
+          const addr = getEmailAddress();
+          const emailValid = isValidEmail(addr);
           if (msalAccount && emailValid) {
             sendMailGraph(filename, blob, addr)
               .then(() => showStatus(`Zapisano i wysłano e-mailem: ${filename}`, 'ok'))
