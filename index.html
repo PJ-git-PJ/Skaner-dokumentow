@@ -508,6 +508,19 @@
     <label for="nazwaInput">Nazwa</label>
     <input type="text" id="nazwaInput" placeholder="np. Paragon Biedronka" maxlength="80">
 
+    <label style="margin-top:16px;">Kwota (opcjonalnie)</label>
+    <div style="display:flex; gap:10px;">
+      <input type="text" id="amountInput" inputmode="decimal" placeholder="0,00" style="flex:1;">
+      <button type="button" class="secondary-btn" id="currencyToggleBtn" aria-pressed="false" data-currency="PLN" style="margin-top:0; flex:0 0 84px;">PLN</button>
+    </div>
+    <p class="crop-hint" style="text-align:left; margin-top:6px;">Przytrzymaj walutę, aby zmienić. Włączona (na niebiesko) doda kwotę do stopki PDF.</p>
+
+    <div id="currencyPickerPanel" style="display:none; margin-top:0; border:1px solid var(--rule); border-radius:12px; padding:12px; background:var(--paper-raised);">
+      <input type="text" id="currencySearchInput" placeholder="Szukaj waluty (np. EUR)" style="margin-bottom:10px;">
+      <div id="currencyList" style="max-height:280px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;"></div>
+      <button type="button" class="retake" id="currencyCancelBtn">Anuluj</button>
+    </div>
+
     <label for="opisInput">Opis (opcjonalnie)</label>
     <textarea id="opisInput" placeholder="np. Zakupy spożywcze, do rozliczenia"></textarea>
 
@@ -546,9 +559,9 @@
     </div>
 
     <label style="margin-top:20px;">Zapisywanie po wygenerowaniu PDF</label>
-    <button type="button" class="secondary-btn" id="localSaveToggleBtn" aria-pressed="true" style="margin-top:0;">Zapis w telefonie</button>
+    <button type="button" class="secondary-btn" id="emailToggleBtn" aria-pressed="false" style="margin-top:0;">Wyślij e-mailem</button>
+    <button type="button" class="secondary-btn" id="localSaveToggleBtn" aria-pressed="true">Zapis w telefonie</button>
     <button type="button" class="secondary-btn" id="msSaveToggleBtn" aria-pressed="false">Zapis OneDrive</button>
-    <button type="button" class="secondary-btn" id="emailToggleBtn" aria-pressed="false">Wyślij e-mailem</button>
     <p class="crop-hint" id="msAccountText" style="display:none;"></p>
     <div id="oneDriveFolderRow" style="display:none;">
       <label>Folder na OneDrive</label>
@@ -675,6 +688,124 @@
   const filterBtns = document.querySelectorAll('.filter-btn');
   const nazwaInput = document.getElementById('nazwaInput');
   const opisInput = document.getElementById('opisInput');
+
+  // ---------- kwota i waluta ----------
+  const amountInput = document.getElementById('amountInput');
+  const currencyToggleBtn = document.getElementById('currencyToggleBtn');
+  const currencyPickerPanel = document.getElementById('currencyPickerPanel');
+  const currencySearchInput = document.getElementById('currencySearchInput');
+  const currencyList = document.getElementById('currencyList');
+  const currencyCancelBtn = document.getElementById('currencyCancelBtn');
+  const CURRENCY_KEY = 'skanerSelectedCurrency';
+  const AMOUNT_ENABLED_KEY = 'skanerAmountEnabled';
+  const DEFAULT_CURRENCY = 'PLN';
+  const BASE_CURRENCIES = ['PLN', 'EUR', 'USD'];
+  // Pełna lista aktywnych kodów walut ISO 4217 (wszystkie waluty świata)
+  const ALL_CURRENCIES = ['AED','AFN','ALL','AMD','ANG','AOA','ARS','AUD','AWG','AZN','BAM','BBD','BDT','BGN','BHD','BIF','BMD','BND','BOB','BRL','BSD','BTN','BWP','BYN','BZD','CAD','CDF','CHF','CLP','CNY','COP','CRC','CUP','CVE','CZK','DJF','DKK','DOP','DZD','EGP','ERN','ETB','EUR','FJD','FKP','GBP','GEL','GHS','GIP','GMD','GNF','GTQ','GYD','HKD','HNL','HTG','HUF','IDR','ILS','INR','IQD','IRR','ISK','JMD','JOD','JPY','KES','KGS','KHR','KMF','KPW','KRW','KWD','KYD','KZT','LAK','LBP','LKR','LRD','LSL','LYD','MAD','MDL','MGA','MKD','MMK','MNT','MOP','MRU','MUR','MVR','MWK','MXN','MYR','MZN','NAD','NGN','NIO','NOK','NPR','NZD','OMR','PAB','PEN','PGK','PHP','PKR','PLN','PYG','QAR','RON','RSD','RUB','RWF','SAR','SBD','SCR','SDG','SEK','SGD','SHP','SLE','SOS','SRD','SSP','STN','SYP','SZL','THB','TJS','TMT','TND','TOP','TRY','TTD','TWD','TZS','UAH','UGX','USD','UYU','UZS','VES','VND','VUV','WST','XAF','XCD','XOF','XPF','YER','ZAR','ZMW','ZWL'];
+
+  function getSelectedCurrency() {
+    try { return localStorage.getItem(CURRENCY_KEY) || DEFAULT_CURRENCY; } catch (e) { return DEFAULT_CURRENCY; }
+  }
+  function setSelectedCurrency(code) {
+    try { localStorage.setItem(CURRENCY_KEY, code); } catch (e) {}
+    currencyToggleBtn.textContent = code;
+    currencyToggleBtn.dataset.currency = code;
+  }
+  currencyToggleBtn.textContent = getSelectedCurrency();
+  currencyToggleBtn.dataset.currency = getSelectedCurrency();
+  try {
+    if (localStorage.getItem(AMOUNT_ENABLED_KEY) === 'true') currencyToggleBtn.setAttribute('aria-pressed', 'true');
+  } catch (e) {}
+
+  function buildCurrencyOrder() {
+    const lastUsed = getSelectedCurrency();
+    let others = ALL_CURRENCIES.filter(c => !BASE_CURRENCIES.includes(c)).sort((a, b) => a.localeCompare(b));
+    let list = BASE_CURRENCIES.slice();
+    if (lastUsed && !BASE_CURRENCIES.includes(lastUsed)) {
+      others = others.filter(c => c !== lastUsed);
+      list.push(lastUsed); // ostatnio wybrana waluta wskakuje jako 4. pozycja
+    }
+    return list.concat(others);
+  }
+
+  function renderCurrencyList(query) {
+    const current = getSelectedCurrency();
+    const q = (query || '').trim().toUpperCase();
+    const full = buildCurrencyOrder();
+    const filtered = q ? full.filter(code => code.includes(q)) : full;
+    currencyList.innerHTML = '';
+    if (filtered.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'crop-hint';
+      empty.style.margin = '0';
+      empty.textContent = 'Brak wyników.';
+      currencyList.appendChild(empty);
+      return;
+    }
+    filtered.forEach(code => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'secondary-btn';
+      btn.style.marginTop = '0';
+      btn.style.textAlign = 'left';
+      btn.setAttribute('aria-pressed', String(code === current));
+      btn.textContent = code;
+      btn.addEventListener('click', () => {
+        setSelectedCurrency(code);
+        currencyPickerPanel.style.display = 'none';
+      });
+      currencyList.appendChild(btn);
+    });
+  }
+
+  currencySearchInput.addEventListener('input', () => {
+    renderCurrencyList(currencySearchInput.value);
+  });
+
+  currencyCancelBtn.addEventListener('click', () => { currencyPickerPanel.style.display = 'none'; });
+
+  amountInput.addEventListener('blur', () => {
+    const raw = amountInput.value.trim().replace(',', '.');
+    if (!raw) return;
+    const num = parseFloat(raw);
+    amountInput.value = isNaN(num) ? '' : num.toFixed(2).replace('.', ',');
+  });
+
+  let currencyLongPressTimer = null;
+  let currencyLongPressFired = false;
+  const CURRENCY_LONG_PRESS_MS = 550;
+
+  currencyToggleBtn.addEventListener('pointerdown', () => {
+    currencyLongPressFired = false;
+    currencyLongPressTimer = setTimeout(() => {
+      currencyLongPressFired = true;
+      if (navigator.vibrate) navigator.vibrate(15);
+      currencySearchInput.value = '';
+      renderCurrencyList('');
+      currencyPickerPanel.style.display = '';
+      currencySearchInput.focus();
+    }, CURRENCY_LONG_PRESS_MS);
+  });
+  const cancelCurrencyLongPress = () => clearTimeout(currencyLongPressTimer);
+  currencyToggleBtn.addEventListener('pointerup', cancelCurrencyLongPress);
+  currencyToggleBtn.addEventListener('pointerleave', cancelCurrencyLongPress);
+  currencyToggleBtn.addEventListener('pointercancel', cancelCurrencyLongPress);
+
+  currencyToggleBtn.addEventListener('click', () => {
+    if (currencyLongPressFired) { currencyLongPressFired = false; return; }
+    const next = currencyToggleBtn.getAttribute('aria-pressed') !== 'true';
+    currencyToggleBtn.setAttribute('aria-pressed', String(next));
+    try { localStorage.setItem(AMOUNT_ENABLED_KEY, String(next)); } catch (e) {}
+  });
+
+  function getAmountLine() {
+    if (currencyToggleBtn.getAttribute('aria-pressed') !== 'true') return null;
+    const raw = amountInput.value.trim().replace(',', '.');
+    if (!raw) return null;
+    const num = parseFloat(raw);
+    if (isNaN(num)) return null;
+    return `Kwota: ${num.toFixed(2).replace('.', ',')} ${getSelectedCurrency()}`;
+  }
   const timeToggle = document.getElementById('timeToggle');
   const manualDateToggle = document.getElementById('manualDateToggle');
   const manualDateTimeRow = document.getElementById('manualDateTimeRow');
@@ -774,6 +905,7 @@
 
   // ---------- niestandardowe nazwy przyciskow kategorii (zapamietane lokalnie w tej przegladarce) ----------
   const CAT_LABELS_KEY = 'skanerCategoryLabels';
+  const SELECTED_CATEGORY_KEY = 'skanerSelectedCategory';
 
   function saveCategoryLabels() {
     try {
@@ -804,7 +936,10 @@
     if (!trimmed || trimmed === current) return;
     btn.textContent = trimmed;
     btn.dataset.category = trimmed;
-    if (selectedCategory === current) selectedCategory = trimmed;
+    if (selectedCategory === current) {
+      selectedCategory = trimmed;
+      try { localStorage.setItem(SELECTED_CATEGORY_KEY, trimmed); } catch (e) {}
+    }
     saveCategoryLabels();
   }
 
@@ -834,12 +969,26 @@
       categoryBtns.forEach(b => b.setAttribute('aria-pressed', 'false'));
       selectedCategory = wasActive ? null : btn.dataset.category;
       if (selectedCategory) btn.setAttribute('aria-pressed', 'true');
+      try { localStorage.setItem(SELECTED_CATEGORY_KEY, selectedCategory || ''); } catch (e) {}
     });
   });
+
+  // przywróć zapamiętaną kategorię (po ewentualnym wczytaniu zmienionych nazw przyciskow wyzej)
+  try {
+    const savedCategory = localStorage.getItem(SELECTED_CATEGORY_KEY);
+    if (savedCategory) {
+      categoryBtns.forEach(b => {
+        if (b.dataset.category === savedCategory) {
+          b.setAttribute('aria-pressed', 'true');
+          selectedCategory = savedCategory;
+        }
+      });
+    }
+  } catch (e) {}
   const statusMsg = document.getElementById('statusMsg');
 
   // ---------- dziennik zapisów (Excel) - lokalny zapas na wypadek braku logowania Microsoft ----------
-  const LOG_HEADERS = ['Data zapisu', 'Plik', 'Nazwa', 'Opis', 'Płatność', 'Liczba stron'];
+  const LOG_HEADERS = ['Data zapisu', 'Plik', 'Nazwa', 'Opis', 'Płatność', 'Kwota', 'Waluta', 'Liczba stron'];
   const LOCAL_LOG_KEY = 'skanerLogEntries';
 
   const isTopLevel = (() => {
@@ -1175,7 +1324,7 @@
       throw new Error('Odczyt dziennika OneDrive nieudany: ' + getRes.status);
     }
 
-    rows.push([row.savedAt, row.filename, row.nazwa, row.opis, row.category, row.pages]);
+    rows.push([row.savedAt, row.filename, row.nazwa, row.opis, row.category, row.amount, row.currency, row.pages]);
     const ws2 = XLSX.utils.aoa_to_sheet(rows);
     const wb2 = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb2, ws2, 'Dziennik');
@@ -1394,8 +1543,7 @@
       pages = [];
       updateCarousel();
       pagesNote.style.display = 'none';
-      selectedCategory = null;
-      categoryBtns.forEach(b => b.setAttribute('aria-pressed', 'false'));
+      amountInput.value = '';
     }
     resetGenerateBtn();
     document.getElementById('captureCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1930,6 +2078,10 @@
         pctx.fillText(`Płatność: ${d.category}`, d.margin * k, lineY * k);
         lineY += 6;
       }
+      if (d.amountLine) {
+        pctx.fillText(d.amountLine, d.margin * k, lineY * k);
+        lineY += 6;
+      }
       pctx.fillText(fitLine(`Plik: ${d.filename}`), d.margin * k, lineY * k); lineY += 6;
       pctx.fillText(fitLine(`Notatka: ${d.opis.length ? d.opis : '—'}`), d.margin * k, lineY * k); lineY += 6;
       pctx.fillText(`Zapisano (lokalnie): ${d.savedAt}`, d.margin * k, lineY * k); lineY += 6;
@@ -1959,7 +2111,8 @@
         { dataUrl: previewCanvas.toDataURL('image/jpeg', 0.92), width: previewCanvas.width, height: previewCanvas.height }
       ];
       const isMulti = allPages.length > 1;
-      const lineCount = 4 + (isMulti ? 1 : 0) + (selectedCategory ? 1 : 0);
+      const amountLine = getAmountLine();
+      const lineCount = 4 + (isMulti ? 1 : 0) + (selectedCategory ? 1 : 0) + (amountLine ? 1 : 0);
 
       const pageW = 210, pageH = 297; // A4 mm
       const margin = 10;
@@ -2018,6 +2171,10 @@
           doc.text(`Płatność: ${selectedCategory}`, margin, lineY);
           lineY += 6;
         }
+        if (amountLine) {
+          doc.text(amountLine, margin, lineY);
+          lineY += 6;
+        }
         doc.text(fitOneLine(`Plik: ${filename}`), margin, lineY); lineY += 6;
         doc.text(fitOneLine(`Notatka: ${opis.length ? opis : '—'}`), margin, lineY); lineY += 6;
         doc.text(`Zapisano (lokalnie): ${savedAt}`, margin, lineY); lineY += 6;
@@ -2045,7 +2202,7 @@
         imgData: lastDrawParams.dataUrl, x: lastDrawParams.x, y: lastDrawParams.y,
         drawW: lastDrawParams.drawW, drawH: lastDrawParams.drawH,
         pageW, pageH, margin, stampTop, filename, opis, savedAt, savedAtPL,
-        isMulti, pageIndex: allPages.length, pageTotal: allPages.length, category: selectedCategory
+        isMulti, pageIndex: allPages.length, pageTotal: allPages.length, category: selectedCategory, amountLine
       });
 
       const localSaveEnabled = localSaveToggleBtn.getAttribute('aria-pressed') === 'true';
@@ -2082,8 +2239,11 @@
         generateBtn.dataset.mode = 'reset';
         generateBtn.disabled = false;
 
+        const rawAmount = amountInput.value.trim();
         const logRow = {
-          savedAt, filename, nazwa, opis, category: selectedCategory || '', pages: allPages.length
+          savedAt, filename, nazwa, opis, category: selectedCategory || '',
+          amount: rawAmount, currency: rawAmount ? getSelectedCurrency() : '',
+          pages: allPages.length
         };
         appendLocalLogEntry(logRow);
         if (emailToggleBtn.getAttribute('aria-pressed') === 'true') {
