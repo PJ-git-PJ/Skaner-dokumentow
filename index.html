@@ -871,9 +871,45 @@
   oneDriveFolderInput.addEventListener('input', saveOneDriveFolder);
   oneDriveFolderInput.addEventListener('change', saveOneDriveFolder);
 
-  function getOneDriveFolder() {
+  function getOneDriveFolderSegments() {
     const raw = (oneDriveFolderInput.value || ONEDRIVE_DEFAULT_FOLDER).trim() || ONEDRIVE_DEFAULT_FOLDER;
-    return raw.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+    return raw.split('/').map(s => s.trim()).filter(Boolean);
+  }
+
+  function getOneDriveFolder() {
+    return getOneDriveFolderSegments().map(encodeURIComponent).join('/');
+  }
+
+  // Jawnie sprawdza/tworzy folder (i podfoldery) na OneDrive segment po segmencie,
+  // zamiast polegać na niejawnym auto-tworzeniu folderu przez PUT :/content, które
+  // bywa zawodne dla kont osobistych OneDrive.
+  async function ensureOneDriveFolder() {
+    const token = await getMsToken(['Files.ReadWrite']);
+    if (!token) throw new Error('Brak tokenu OneDrive');
+    const segments = getOneDriveFolderSegments();
+    let encodedPath = '';
+    for (const seg of segments) {
+      const parentEncodedPath = encodedPath;
+      encodedPath = encodedPath ? `${encodedPath}/${encodeURIComponent(seg)}` : encodeURIComponent(seg);
+      const checkRes = await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${encodedPath}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (checkRes.ok) continue; // ten segment już istnieje
+      if (checkRes.status !== 404) {
+        throw new Error('Nie udało się sprawdzić folderu OneDrive: ' + checkRes.status);
+      }
+      const createUrl = parentEncodedPath
+        ? `https://graph.microsoft.com/v1.0/me/drive/root:/${parentEncodedPath}:/children`
+        : `https://graph.microsoft.com/v1.0/me/drive/root/children`;
+      const createRes = await fetch(createUrl, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: seg, folder: {}, '@microsoft.graph.conflictBehavior': 'replace' })
+      });
+      if (!createRes.ok) {
+        throw new Error('Nie udało się utworzyć folderu OneDrive: ' + createRes.status);
+      }
+    }
   }
 
   function setMsEnabled(enabled) {
@@ -945,6 +981,7 @@
   }
 
   async function uploadToOneDrive(filename, blob) {
+    await ensureOneDriveFolder();
     const token = await getMsToken(['Files.ReadWrite']);
     if (!token) throw new Error('Brak tokenu OneDrive');
     const folder = getOneDriveFolder();
@@ -959,6 +996,7 @@
 
   // Dziennik .xlsx trzymany bezpośrednio w tym samym folderze OneDrive co PDF-y (odczyt-dopisz-zapis przez Graph API)
   async function appendRowToOneDriveLog(row) {
+    await ensureOneDriveFolder();
     const token = await getMsToken(['Files.ReadWrite']);
     if (!token) throw new Error('Brak tokenu OneDrive');
     const folder = getOneDriveFolder();
