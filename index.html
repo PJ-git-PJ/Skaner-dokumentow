@@ -12,71 +12,32 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
+  /* light-dark(jasny, ciemny) - motyw wg ustawień systemu, chyba że data-theme wymusza jeden z nich */
   :root {
-    color-scheme: light;
-    --paper: #F1F3F6;
-    --paper-raised: #FFFFFF;
-    --card: #FFFFFF;
-    --ink: #202124;
-    --ink-soft: #5F6368;
-    --ink-faint: #9AA0A6;
-    --rule: #DADCE0;
-    --stamp: #1A73E8;
-    --stamp-dark: #185ABC;
-    --stamp-ink: #FFFFFF;
-    --ok: #1E8E3E;
-    --ok-ink: #FFFFFF;
-    --accent-yellow: #F9AB00;
-    --danger: #D93025;
-    --shadow: rgba(32, 33, 36, 0.16);
-    --focus: #1A73E8;
+    color-scheme: light dark;
+    --paper: light-dark(#F1F3F6, #202124);
+    --paper-raised: light-dark(#FFFFFF, #28292C);
+    --card: light-dark(#FFFFFF, #2D2E30);
+    --ink: light-dark(#202124, #E8EAED);
+    --ink-soft: light-dark(#5F6368, #BDC1C6);
+    --ink-faint: light-dark(#9AA0A6, #80868B);
+    --rule: light-dark(#DADCE0, #3C4043);
+    --stamp: light-dark(#1A73E8, #8AB4F8);
+    --stamp-dark: light-dark(#185ABC, #669DF6);
+    --stamp-ink: light-dark(#FFFFFF, #202124);
+    --ok: light-dark(#1E8E3E, #81C995);
+    --ok-ink: light-dark(#FFFFFF, #202124);
+    --accent-yellow: light-dark(#F9AB00, #FDD663);
+    --danger: light-dark(#D93025, #F28B82);
+    --shadow: light-dark(rgba(32, 33, 36, 0.16), rgba(0, 0, 0, 0.5));
+    --focus: var(--stamp);
 
     box-sizing: border-box;
     padding-top: env(safe-area-inset-top, 0px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
-
-  :root:not([data-theme="light"]) {
-    @media (prefers-color-scheme: dark) {
-      color-scheme: dark;
-      --paper: #202124;
-      --paper-raised: #28292C;
-      --card: #2D2E30;
-      --ink: #E8EAED;
-      --ink-soft: #BDC1C6;
-      --ink-faint: #80868B;
-      --rule: #3C4043;
-      --stamp: #8AB4F8;
-      --stamp-dark: #669DF6;
-      --stamp-ink: #202124;
-      --ok: #81C995;
-      --ok-ink: #202124;
-      --accent-yellow: #FDD663;
-      --danger: #F28B82;
-      --shadow: rgba(0, 0, 0, 0.5);
-      --focus: #8AB4F8;
-    }
-  }
-
-  :root[data-theme="dark"] {
-    color-scheme: dark;
-    --paper: #202124;
-    --paper-raised: #28292C;
-    --card: #2D2E30;
-    --ink: #E8EAED;
-    --ink-soft: #BDC1C6;
-    --ink-faint: #80868B;
-    --rule: #3C4043;
-    --stamp: #8AB4F8;
-    --stamp-dark: #669DF6;
-    --stamp-ink: #202124;
-    --ok: #81C995;
-    --ok-ink: #202124;
-    --accent-yellow: #FDD663;
-    --danger: #F28B82;
-    --shadow: rgba(0, 0, 0, 0.5);
-    --focus: #8AB4F8;
-  }
+  :root[data-theme="light"] { color-scheme: light; }
+  :root[data-theme="dark"] { color-scheme: dark; }
 
   html, body { height: 100%; }
   * { box-sizing: border-box; }
@@ -220,34 +181,19 @@
   .filter-row { display: flex; gap: 8px; margin-top: 12px; }
 
   .category-row { display: flex; gap: 6px; margin-bottom: 14px; }
-  .cat-btn {
+  .cat-btn, .filter-btn {
     flex: 1;
-    padding: 10px 3px;
     border-radius: 10px;
     border: 1px solid var(--rule);
     background: var(--paper-raised);
     color: var(--ink-soft);
     font-family: "Manrope", sans-serif;
-    font-size: 12.5px;
-    font-weight: 600;
-    line-height: 1.2;
-    text-align: center;
-    cursor: pointer;
-  }
-  .cat-btn[aria-pressed="true"] { background: var(--stamp); color: var(--stamp-ink); border-color: var(--stamp); }
-  .filter-btn {
-    flex: 1;
-    padding: 9px 6px;
-    border-radius: 10px;
-    border: 1px solid var(--rule);
-    background: var(--paper-raised);
-    color: var(--ink-soft);
-    font-family: "Manrope", sans-serif;
-    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
   }
-  .filter-btn[aria-pressed="true"] { background: var(--stamp); color: var(--stamp-ink); border-color: var(--stamp); }
+  .cat-btn { padding: 10px 3px; font-size: 12.5px; line-height: 1.2; text-align: center; }
+  .filter-btn { padding: 9px 6px; font-size: 13px; }
+  .cat-btn[aria-pressed="true"], .filter-btn[aria-pressed="true"] { background: var(--stamp); color: var(--stamp-ink); border-color: var(--stamp); }
 
   .slider-row { margin-top: 14px; }
   .slider-row label {
@@ -375,6 +321,12 @@
   .secondary-btn:active { background: var(--rule); }
   .secondary-btn[aria-pressed="true"] { background: var(--stamp); color: var(--stamp-ink); }
   .secondary-btn[aria-pressed="true"]:active { background: var(--stamp-dark); }
+
+  /* panele wyboru (waluta, folder OneDrive) */
+  .picker-panel { border: 1px solid var(--rule); border-radius: 12px; padding: 12px; background: var(--paper-raised); }
+  .picker-list { max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+  .secondary-btn.list-btn { margin-top: 0; text-align: left; }
+  .list-hint { margin: 0; }
 
   .split-row { display: flex; gap: 10px; margin-top: 12px; }
   .split-row .primary-btn, .split-row .secondary-btn { margin-top: 0; flex: 1; }
@@ -511,13 +463,13 @@
     <label style="margin-top:16px;">Kwota (opcjonalnie)</label>
     <div style="display:flex; gap:10px;">
       <input type="text" id="amountInput" inputmode="decimal" placeholder="0,00" style="flex:1;">
-      <button type="button" class="secondary-btn" id="currencyToggleBtn" aria-pressed="false" data-currency="PLN" style="margin-top:0; flex:0 0 84px;">PLN</button>
+      <button type="button" class="secondary-btn" id="currencyToggleBtn" aria-pressed="false" style="margin-top:0; flex:0 0 84px;">PLN</button>
     </div>
     <p class="crop-hint" style="text-align:left; margin-top:6px;">Przytrzymaj walutę, aby zmienić. Włączona (na niebiesko) doda kwotę do stopki PDF.</p>
 
-    <div id="currencyPickerPanel" style="display:none; margin-top:0; border:1px solid var(--rule); border-radius:12px; padding:12px; background:var(--paper-raised);">
+    <div class="picker-panel" id="currencyPickerPanel" style="display:none;">
       <input type="text" id="currencySearchInput" placeholder="Szukaj waluty (np. EUR)" style="margin-bottom:10px;">
-      <div id="currencyList" style="max-height:280px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;"></div>
+      <div class="picker-list" id="currencyList"></div>
       <button type="button" class="retake" id="currencyCancelBtn">Anuluj</button>
     </div>
 
@@ -567,9 +519,9 @@
       <label>Folder na OneDrive</label>
       <button type="button" class="secondary-btn" id="oneDriveFolderDisplayBtn" style="margin-top:0; text-align:left;">📁 Skaner dokumentow</button>
 
-      <div id="oneDrivePickerPanel" style="display:none; margin-top:10px; border:1px solid var(--rule); border-radius:12px; padding:12px; background:var(--paper-raised);">
+      <div class="picker-panel" id="oneDrivePickerPanel" style="display:none; margin-top:10px;">
         <p class="crop-hint" id="pickerPathText" style="margin:0 0 10px; text-align:left;">Dysk główny</p>
-        <div id="pickerList" style="max-height:280px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;"></div>
+        <div class="picker-list" id="pickerList"></div>
         <button type="button" class="secondary-btn" id="pickerNewFolderBtn" style="margin-top:10px;">+ Nowy folder tutaj</button>
         <button type="button" class="primary-btn" id="pickerSelectBtn" style="margin-top:10px;">Wybierz ten folder</button>
         <button type="button" class="retake" id="pickerCancelBtn">Anuluj</button>
@@ -638,6 +590,65 @@
 (function () {
   "use strict";
 
+  // ---------- funkcje pomocnicze ----------
+  // localStorage może być niedostępny (tryb prywatny, zablokowane dane) - wtedy po prostu nie zapamiętujemy
+  function load(key, fallback) {
+    try { const v = localStorage.getItem(key); return v === null ? fallback : v; } catch (e) { return fallback; }
+  }
+  function save(key, value) {
+    try { localStorage.setItem(key, value); } catch (e) { /* ignoruj */ }
+  }
+
+  function isOn(btn) { return btn.getAttribute('aria-pressed') === 'true'; }
+  function setOn(btn, on) { btn.setAttribute('aria-pressed', String(on)); }
+  // przełącznik on/off zapamiętywany pod podanym kluczem
+  function setToggle(btn, key, on) { setOn(btn, on); save(key, String(on)); }
+
+  // Krótkie kliknięcie -> tap(), przytrzymanie -> longPress() (bez wywoływania tap)
+  const LONG_PRESS_MS = 550;
+  function onPress(btn, { tap, longPress }) {
+    let timer = null;
+    let fired = false;
+    const cancel = () => clearTimeout(timer);
+    btn.addEventListener('pointerdown', () => {
+      fired = false;
+      timer = setTimeout(() => {
+        fired = true;
+        if (navigator.vibrate) navigator.vibrate(15);
+        longPress();
+      }, LONG_PRESS_MS);
+    });
+    btn.addEventListener('pointerup', cancel);
+    btn.addEventListener('pointerleave', cancel);
+    btn.addEventListener('pointercancel', cancel);
+    btn.addEventListener('click', () => {
+      if (fired) { fired = false; return; }
+      tap();
+    });
+  }
+
+  // przycisk na liście w panelu wyboru (waluta, folder)
+  function makeListBtn(text, onClick, pressed) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'secondary-btn list-btn';
+    btn.textContent = text;
+    if (pressed !== undefined) setOn(btn, pressed);
+    btn.addEventListener('click', onClick);
+    return btn;
+  }
+  function listHint(text) {
+    const p = document.createElement('p');
+    p.className = 'crop-hint list-hint';
+    p.textContent = text;
+    return p;
+  }
+
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function fmtDate(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+  function fmtTime(d, sep = ':') { return `${pad(d.getHours())}${sep}${pad(d.getMinutes())}`; }
+  function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
   // ---------- obsługa gestu/przycisku "wstecz" ----------
   // Bez tego pojedyncza strona nie ma własnej historii, więc gest cofania od razu
   // zamyka appkę. Utrzymujemy w historii przeglądarki jeden "bufor" - cofnięcie
@@ -645,7 +656,6 @@
   // wychodzi z niej. Dopiero na samym ekranie startowym (brak wcześniejszych kroków)
   // kolejne cofnięcie działa normalnie i zamyka/cofa stronę.
   let currentStep = 'capture';
-  function markStep(name) { currentStep = name; }
   function armBackGesture() {
     try { history.pushState({ appBuffer: true }, '', location.href); } catch (e) { /* ignoruj */ }
   }
@@ -663,6 +673,7 @@
   });
 
   const fileInput = document.getElementById('fileInput');
+  const captureCard = document.getElementById('captureCard');
   const captureZone = document.getElementById('captureZone');
   const captureCardTitle = document.getElementById('captureCardTitle');
   const captureSection = document.getElementById('captureSection');
@@ -703,19 +714,13 @@
   // Pełna lista aktywnych kodów walut ISO 4217 (wszystkie waluty świata)
   const ALL_CURRENCIES = ['AED','AFN','ALL','AMD','ANG','AOA','ARS','AUD','AWG','AZN','BAM','BBD','BDT','BGN','BHD','BIF','BMD','BND','BOB','BRL','BSD','BTN','BWP','BYN','BZD','CAD','CDF','CHF','CLP','CNY','COP','CRC','CUP','CVE','CZK','DJF','DKK','DOP','DZD','EGP','ERN','ETB','EUR','FJD','FKP','GBP','GEL','GHS','GIP','GMD','GNF','GTQ','GYD','HKD','HNL','HTG','HUF','IDR','ILS','INR','IQD','IRR','ISK','JMD','JOD','JPY','KES','KGS','KHR','KMF','KPW','KRW','KWD','KYD','KZT','LAK','LBP','LKR','LRD','LSL','LYD','MAD','MDL','MGA','MKD','MMK','MNT','MOP','MRU','MUR','MVR','MWK','MXN','MYR','MZN','NAD','NGN','NIO','NOK','NPR','NZD','OMR','PAB','PEN','PGK','PHP','PKR','PLN','PYG','QAR','RON','RSD','RUB','RWF','SAR','SBD','SCR','SDG','SEK','SGD','SHP','SLE','SOS','SRD','SSP','STN','SYP','SZL','THB','TJS','TMT','TND','TOP','TRY','TTD','TWD','TZS','UAH','UGX','USD','UYU','UZS','VES','VND','VUV','WST','XAF','XCD','XOF','XPF','YER','ZAR','ZMW','ZWL'];
 
-  function getSelectedCurrency() {
-    try { return localStorage.getItem(CURRENCY_KEY) || DEFAULT_CURRENCY; } catch (e) { return DEFAULT_CURRENCY; }
-  }
+  function getSelectedCurrency() { return load(CURRENCY_KEY, DEFAULT_CURRENCY); }
   function setSelectedCurrency(code) {
-    try { localStorage.setItem(CURRENCY_KEY, code); } catch (e) {}
+    save(CURRENCY_KEY, code);
     currencyToggleBtn.textContent = code;
-    currencyToggleBtn.dataset.currency = code;
   }
   currencyToggleBtn.textContent = getSelectedCurrency();
-  currencyToggleBtn.dataset.currency = getSelectedCurrency();
-  try {
-    if (localStorage.getItem(AMOUNT_ENABLED_KEY) === 'true') currencyToggleBtn.setAttribute('aria-pressed', 'true');
-  } catch (e) {}
+  if (load(AMOUNT_ENABLED_KEY) === 'true') setOn(currencyToggleBtn, true);
 
   function buildCurrencyOrder() {
     const lastUsed = getSelectedCurrency();
@@ -733,29 +738,11 @@
     const q = (query || '').trim().toUpperCase();
     const full = buildCurrencyOrder();
     const filtered = q ? full.filter(code => code.includes(q)) : full;
-    currencyList.innerHTML = '';
-    if (filtered.length === 0) {
-      const empty = document.createElement('p');
-      empty.className = 'crop-hint';
-      empty.style.margin = '0';
-      empty.textContent = 'Brak wyników.';
-      currencyList.appendChild(empty);
-      return;
-    }
-    filtered.forEach(code => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'secondary-btn';
-      btn.style.marginTop = '0';
-      btn.style.textAlign = 'left';
-      btn.setAttribute('aria-pressed', String(code === current));
-      btn.textContent = code;
-      btn.addEventListener('click', () => {
-        setSelectedCurrency(code);
-        currencyPickerPanel.style.display = 'none';
-      });
-      currencyList.appendChild(btn);
-    });
+    const items = filtered.map(code => makeListBtn(code, () => {
+      setSelectedCurrency(code);
+      currencyPickerPanel.style.display = 'none';
+    }, code === current));
+    currencyList.replaceChildren(...(items.length ? items : [listHint('Brak wyników.')]));
   }
 
   currencySearchInput.addEventListener('input', () => {
@@ -764,47 +751,33 @@
 
   currencyCancelBtn.addEventListener('click', () => { currencyPickerPanel.style.display = 'none'; });
 
+  // kwota z pola tekstowego (akceptuje przecinek); null, gdy pusta lub niepoprawna
+  function parseAmount() {
+    const num = parseFloat(amountInput.value.trim().replace(',', '.'));
+    return isNaN(num) ? null : num;
+  }
+  function formatAmount(num) { return num.toFixed(2).replace('.', ','); }
+
   amountInput.addEventListener('blur', () => {
-    const raw = amountInput.value.trim().replace(',', '.');
-    if (!raw) return;
-    const num = parseFloat(raw);
-    amountInput.value = isNaN(num) ? '' : num.toFixed(2).replace('.', ',');
+    if (!amountInput.value.trim()) return;
+    const num = parseAmount();
+    amountInput.value = num === null ? '' : formatAmount(num);
   });
 
-  let currencyLongPressTimer = null;
-  let currencyLongPressFired = false;
-  const CURRENCY_LONG_PRESS_MS = 550;
-
-  currencyToggleBtn.addEventListener('pointerdown', () => {
-    currencyLongPressFired = false;
-    currencyLongPressTimer = setTimeout(() => {
-      currencyLongPressFired = true;
-      if (navigator.vibrate) navigator.vibrate(15);
+  onPress(currencyToggleBtn, {
+    longPress: () => {
       currencySearchInput.value = '';
       renderCurrencyList('');
       currencyPickerPanel.style.display = '';
       currencySearchInput.focus();
-    }, CURRENCY_LONG_PRESS_MS);
-  });
-  const cancelCurrencyLongPress = () => clearTimeout(currencyLongPressTimer);
-  currencyToggleBtn.addEventListener('pointerup', cancelCurrencyLongPress);
-  currencyToggleBtn.addEventListener('pointerleave', cancelCurrencyLongPress);
-  currencyToggleBtn.addEventListener('pointercancel', cancelCurrencyLongPress);
-
-  currencyToggleBtn.addEventListener('click', () => {
-    if (currencyLongPressFired) { currencyLongPressFired = false; return; }
-    const next = currencyToggleBtn.getAttribute('aria-pressed') !== 'true';
-    currencyToggleBtn.setAttribute('aria-pressed', String(next));
-    try { localStorage.setItem(AMOUNT_ENABLED_KEY, String(next)); } catch (e) {}
+    },
+    tap: () => setToggle(currencyToggleBtn, AMOUNT_ENABLED_KEY, !isOn(currencyToggleBtn))
   });
 
   function getAmountLine() {
-    if (currencyToggleBtn.getAttribute('aria-pressed') !== 'true') return null;
-    const raw = amountInput.value.trim().replace(',', '.');
-    if (!raw) return null;
-    const num = parseFloat(raw);
-    if (isNaN(num)) return null;
-    return `Kwota: ${num.toFixed(2).replace('.', ',')} ${getSelectedCurrency()}`;
+    if (!isOn(currencyToggleBtn)) return null;
+    const num = parseAmount();
+    return num === null ? null : `Kwota: ${formatAmount(num)} ${getSelectedCurrency()}`;
   }
   const timeToggle = document.getElementById('timeToggle');
   const manualDateToggle = document.getElementById('manualDateToggle');
@@ -821,71 +794,39 @@
   const EMAIL_ENABLED_KEY = 'skanerEmailEnabled';
   const EMAIL_ADDRESS_KEY = 'skanerEmailAddress';
 
-  function getEmailAddress() {
-    try { return localStorage.getItem(EMAIL_ADDRESS_KEY) || ''; } catch (e) { return ''; }
-  }
+  function getEmailAddress() { return load(EMAIL_ADDRESS_KEY, ''); }
   function isValidEmail(addr) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr);
   }
   function updateEmailButton() {
-    const enabled = emailToggleBtn.getAttribute('aria-pressed') === 'true';
     const addr = getEmailAddress();
-    emailToggleBtn.textContent = enabled && addr ? addr : 'Wyślij e-mailem';
-  }
-  function setEmailAddress(addr) {
-    try { localStorage.setItem(EMAIL_ADDRESS_KEY, addr); } catch (e) {}
-    updateEmailButton();
+    emailToggleBtn.textContent = isOn(emailToggleBtn) && addr ? addr : 'Wyślij e-mailem';
   }
   function setEmailEnabled(enabled) {
-    emailToggleBtn.setAttribute('aria-pressed', String(enabled));
-    try { localStorage.setItem(EMAIL_ENABLED_KEY, String(enabled)); } catch (e) {}
+    setToggle(emailToggleBtn, EMAIL_ENABLED_KEY, enabled);
     updateEmailButton();
   }
 
-  try {
-    if (localStorage.getItem(EMAIL_ENABLED_KEY) === 'true' && getEmailAddress()) {
-      emailToggleBtn.setAttribute('aria-pressed', 'true');
-    }
-  } catch (e) {}
+  if (load(EMAIL_ENABLED_KEY) === 'true' && getEmailAddress()) setOn(emailToggleBtn, true);
   updateEmailButton();
 
-  function promptForEmailAddress() {
-    const next = window.prompt('Adres e-mail do wysyłki:', getEmailAddress());
-    if (next === null) return; // anulowano
-    const trimmed = next.trim();
-    if (!trimmed) return;
-    if (!isValidEmail(trimmed)) { showStatus('Niepoprawny adres e-mail.', 'err'); return; }
-    setEmailAddress(trimmed);
+  // pyta o adres; zwraca true, gdy zapisano poprawny
+  function promptForEmailAddress(question) {
+    const next = (window.prompt(question, getEmailAddress()) || '').trim();
+    if (!next) return false; // anulowano albo puste
+    if (!isValidEmail(next)) { showStatus('Niepoprawny adres e-mail.', 'err'); return false; }
+    save(EMAIL_ADDRESS_KEY, next);
+    updateEmailButton();
+    return true;
   }
 
-  let emailLongPressTimer = null;
-  let emailLongPressFired = false;
-  const EMAIL_LONG_PRESS_MS = 550;
-
-  emailToggleBtn.addEventListener('pointerdown', () => {
-    emailLongPressFired = false;
-    emailLongPressTimer = setTimeout(() => {
-      emailLongPressFired = true;
-      if (navigator.vibrate) navigator.vibrate(15);
-      promptForEmailAddress();
-    }, EMAIL_LONG_PRESS_MS);
-  });
-  const cancelEmailLongPress = () => clearTimeout(emailLongPressTimer);
-  emailToggleBtn.addEventListener('pointerup', cancelEmailLongPress);
-  emailToggleBtn.addEventListener('pointerleave', cancelEmailLongPress);
-  emailToggleBtn.addEventListener('pointercancel', cancelEmailLongPress);
-
-  emailToggleBtn.addEventListener('click', () => {
-    if (emailLongPressFired) { emailLongPressFired = false; return; }
-    const currentlyOn = emailToggleBtn.getAttribute('aria-pressed') === 'true';
-    if (currentlyOn) { setEmailEnabled(false); return; }
-    if (!getEmailAddress()) {
-      const addr = window.prompt('Podaj adres e-mail do wysyłki:');
-      if (!addr || !addr.trim()) return;
-      if (!isValidEmail(addr.trim())) { showStatus('Niepoprawny adres e-mail.', 'err'); return; }
-      setEmailAddress(addr.trim());
+  onPress(emailToggleBtn, {
+    longPress: () => promptForEmailAddress('Adres e-mail do wysyłki:'),
+    tap: () => {
+      if (isOn(emailToggleBtn)) { setEmailEnabled(false); return; }
+      if (!getEmailAddress() && !promptForEmailAddress('Podaj adres e-mail do wysyłki:')) return;
+      setEmailEnabled(true);
     }
-    setEmailEnabled(true);
   });
 
   function openEmailDraft(fname) {
@@ -908,25 +849,17 @@
   const SELECTED_CATEGORY_KEY = 'skanerSelectedCategory';
 
   function saveCategoryLabels() {
-    try {
-      const labels = Array.from(categoryBtns).map(b => b.dataset.category);
-      localStorage.setItem(CAT_LABELS_KEY, JSON.stringify(labels));
-    } catch (e) { /* localStorage niedostepny - po prostu nie zapamietujemy */ }
+    save(CAT_LABELS_KEY, JSON.stringify(Array.from(categoryBtns, b => b.dataset.category)));
   }
 
-  function loadCategoryLabels() {
-    try {
-      const raw = localStorage.getItem(CAT_LABELS_KEY);
-      if (!raw) return;
-      const labels = JSON.parse(raw);
-      if (Array.isArray(labels)) {
-        categoryBtns.forEach((b, i) => {
-          if (labels[i]) { b.textContent = labels[i]; b.dataset.category = labels[i]; }
-        });
-      }
-    } catch (e) { /* zignoruj uszkodzony zapis */ }
-  }
-  loadCategoryLabels();
+  try {
+    const labels = JSON.parse(load(CAT_LABELS_KEY, 'null'));
+    if (Array.isArray(labels)) {
+      categoryBtns.forEach((b, i) => {
+        if (labels[i]) { b.textContent = labels[i]; b.dataset.category = labels[i]; }
+      });
+    }
+  } catch (e) { /* zignoruj uszkodzony zapis */ }
 
   function renameCategoryBtn(btn) {
     const current = btn.dataset.category;
@@ -938,53 +871,30 @@
     btn.dataset.category = trimmed;
     if (selectedCategory === current) {
       selectedCategory = trimmed;
-      try { localStorage.setItem(SELECTED_CATEGORY_KEY, trimmed); } catch (e) {}
+      save(SELECTED_CATEGORY_KEY, trimmed);
     }
     saveCategoryLabels();
   }
 
-  const LONG_PRESS_MS = 550;
-  categoryBtns.forEach(btn => {
-    let pressTimer = null;
-    let longPressFired = false;
-
-    const startPress = () => {
-      longPressFired = false;
-      pressTimer = setTimeout(() => {
-        longPressFired = true;
-        if (navigator.vibrate) navigator.vibrate(15);
-        renameCategoryBtn(btn);
-      }, LONG_PRESS_MS);
-    };
-    const cancelPress = () => clearTimeout(pressTimer);
-
-    btn.addEventListener('pointerdown', startPress);
-    btn.addEventListener('pointerup', cancelPress);
-    btn.addEventListener('pointerleave', cancelPress);
-    btn.addEventListener('pointercancel', cancelPress);
-
-    btn.addEventListener('click', () => {
-      if (longPressFired) { longPressFired = false; return; }
-      const wasActive = btn.getAttribute('aria-pressed') === 'true';
-      categoryBtns.forEach(b => b.setAttribute('aria-pressed', 'false'));
+  categoryBtns.forEach(btn => onPress(btn, {
+    longPress: () => renameCategoryBtn(btn),
+    tap: () => {
+      const wasActive = isOn(btn);
+      categoryBtns.forEach(b => setOn(b, false));
       selectedCategory = wasActive ? null : btn.dataset.category;
-      if (selectedCategory) btn.setAttribute('aria-pressed', 'true');
-      try { localStorage.setItem(SELECTED_CATEGORY_KEY, selectedCategory || ''); } catch (e) {}
-    });
-  });
+      if (selectedCategory) setOn(btn, true);
+      save(SELECTED_CATEGORY_KEY, selectedCategory || '');
+    }
+  }));
 
   // przywróć zapamiętaną kategorię (po ewentualnym wczytaniu zmienionych nazw przyciskow wyzej)
-  try {
-    const savedCategory = localStorage.getItem(SELECTED_CATEGORY_KEY);
-    if (savedCategory) {
-      categoryBtns.forEach(b => {
-        if (b.dataset.category === savedCategory) {
-          b.setAttribute('aria-pressed', 'true');
-          selectedCategory = savedCategory;
-        }
-      });
+  const savedCategory = load(SELECTED_CATEGORY_KEY, '');
+  categoryBtns.forEach(b => {
+    if (savedCategory && b.dataset.category === savedCategory) {
+      setOn(b, true);
+      selectedCategory = savedCategory;
     }
-  } catch (e) {}
+  });
   const statusMsg = document.getElementById('statusMsg');
 
   // ---------- dziennik zapisów (Excel) - lokalny zapas na wypadek braku logowania Microsoft ----------
@@ -997,12 +907,11 @@
 
   function appendLocalLogEntry(row) {
     try {
-      const raw = localStorage.getItem(LOCAL_LOG_KEY);
-      const arr = raw ? JSON.parse(raw) : [];
+      const arr = JSON.parse(load(LOCAL_LOG_KEY, '[]'));
       arr.push(row);
       if (arr.length > 3000) arr.splice(0, arr.length - 3000);
-      localStorage.setItem(LOCAL_LOG_KEY, JSON.stringify(arr));
-    } catch (e) { /* localStorage niedostepny */ }
+      save(LOCAL_LOG_KEY, JSON.stringify(arr));
+    } catch (e) { /* uszkodzony zapis */ }
   }
 
   // ---------- Microsoft (OneDrive / Outlook przez Graph API) ----------
@@ -1039,42 +948,28 @@
   const supportsMSAL = isTopLevel && typeof window.msal !== 'undefined';
 
   // "Zapis w telefonie" - domyślnie włączony
-  try {
-    const savedLocal = localStorage.getItem(LOCAL_SAVE_ENABLED_KEY);
-    localSaveToggleBtn.setAttribute('aria-pressed', savedLocal === null ? 'true' : String(savedLocal === 'true'));
-  } catch (e) { localSaveToggleBtn.setAttribute('aria-pressed', 'true'); }
-
+  setOn(localSaveToggleBtn, load(LOCAL_SAVE_ENABLED_KEY, 'true') === 'true');
   localSaveToggleBtn.addEventListener('click', () => {
-    const next = localSaveToggleBtn.getAttribute('aria-pressed') !== 'true';
-    localSaveToggleBtn.setAttribute('aria-pressed', String(next));
-    try { localStorage.setItem(LOCAL_SAVE_ENABLED_KEY, String(next)); } catch (e) {}
+    setToggle(localSaveToggleBtn, LOCAL_SAVE_ENABLED_KEY, !isOn(localSaveToggleBtn));
   });
 
-  function folderDisplayLabel(path) {
-    return path ? path : 'Dysk główny (bez podfolderu)';
-  }
-
   function getOneDriveFolderSegments() {
-    let raw;
-    try { raw = localStorage.getItem(ONEDRIVE_FOLDER_KEY); } catch (e) { raw = null; }
-    if (raw === null) raw = ONEDRIVE_DEFAULT_FOLDER; // nic jeszcze nie wybrano - domyślny folder
+    const raw = load(ONEDRIVE_FOLDER_KEY, ONEDRIVE_DEFAULT_FOLDER); // nic jeszcze nie wybrano - domyślny folder
     return raw.split('/').map(s => s.trim()).filter(Boolean);
   }
 
-  function getOneDriveFolder() {
-    return getOneDriveFolderSegments().map(encodeURIComponent).join('/');
+  // zakodowana ścieżka pliku w wybranym folderze OneDrive
+  function oneDriveItemPath(filename) {
+    return [...getOneDriveFolderSegments(), filename].map(encodeURIComponent).join('/');
   }
 
-  function setSelectedOneDriveFolder(rawPath) {
-    oneDriveFolderDisplayBtn.textContent = '📁 ' + folderDisplayLabel(rawPath);
-    try { localStorage.setItem(ONEDRIVE_FOLDER_KEY, rawPath); } catch (e) {}
+  function showOneDriveFolder(rawPath) {
+    oneDriveFolderDisplayBtn.textContent = '📁 ' + (rawPath || 'Dysk główny (bez podfolderu)');
   }
-
-  // ustaw początkowy napis przycisku na podstawie zapamiętanego wyboru
-  oneDriveFolderDisplayBtn.textContent = '📁 ' + folderDisplayLabel(getOneDriveFolderSegments().join('/'));
+  showOneDriveFolder(getOneDriveFolderSegments().join('/'));
 
   function updateOneDriveFolderVisibility() {
-    const enabled = msSaveToggleBtn.getAttribute('aria-pressed') === 'true';
+    const enabled = isOn(msSaveToggleBtn);
     oneDriveFolderRow.style.display = enabled ? '' : 'none';
     if (!enabled) oneDrivePickerPanel.style.display = 'none';
     if (enabled && msalAccount) {
@@ -1083,6 +978,36 @@
     } else {
       msAccountText.style.display = 'none';
     }
+  }
+
+  // ---------- Microsoft Graph ----------
+  const GRAPH_ME = 'https://graph.microsoft.com/v1.0/me';
+
+  // URL elementu OneDrive; encodedPath '' = dysk główny, suffix np. 'children' / 'content'
+  function driveUrl(encodedPath, suffix) {
+    if (!encodedPath) return `${GRAPH_ME}/drive/root${suffix ? '/' + suffix : ''}`;
+    return `${GRAPH_ME}/drive/root:/${encodedPath}${suffix ? ':/' + suffix : ''}`;
+  }
+
+  // fetch z tokenem; json -> wysyłany jako application/json, body + contentType -> surowe dane
+  async function graph(url, { scope = 'Files.ReadWrite', method = 'GET', json, body, contentType } = {}) {
+    const token = await getMsToken([scope]);
+    if (!token) throw new Error('Brak tokenu ' + scope);
+    const headers = { 'Authorization': `Bearer ${token}` };
+    if (json !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      body = JSON.stringify(json);
+    } else if (contentType) {
+      headers['Content-Type'] = contentType;
+    }
+    return fetch(url, { method, headers, body });
+  }
+
+  function createFolder(parentEncodedPath, name, conflictBehavior) {
+    return graph(driveUrl(parentEncodedPath, 'children'), {
+      method: 'POST',
+      json: { name, folder: {}, '@microsoft.graph.conflictBehavior': conflictBehavior }
+    });
   }
 
   // ---------- przeglądarka folderów OneDrive ----------
@@ -1094,82 +1019,38 @@
 
   async function refreshPickerList() {
     pickerPathText.textContent = pickerSegments.length ? pickerSegments.join(' / ') : 'Dysk główny';
-    pickerList.innerHTML = '<p class="crop-hint" style="margin:0;">Ładowanie…</p>';
+    pickerList.replaceChildren(listHint('Ładowanie…'));
     try {
-      const token = await getMsToken(['Files.ReadWrite']);
-      if (!token) throw new Error('Brak tokenu');
-      const path = pickerPath();
-      const url = path
-        ? `https://graph.microsoft.com/v1.0/me/drive/root:/${path}:/children?$select=name,folder&$top=200`
-        : `https://graph.microsoft.com/v1.0/me/drive/root/children?$select=name,folder&$top=200`;
-      const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await graph(driveUrl(pickerPath(), 'children') + '?$select=name,folder&$top=200');
       if (!res.ok) throw new Error('Błąd pobierania listy: ' + res.status);
       const data = await res.json();
       const folders = (data.value || []).filter(item => item.folder).sort((a, b) => a.name.localeCompare(b.name, 'pl'));
 
-      pickerList.innerHTML = '';
-
+      const items = [];
       if (pickerSegments.length > 0) {
-        const upBtn = document.createElement('button');
-        upBtn.type = 'button';
-        upBtn.className = 'secondary-btn';
-        upBtn.style.marginTop = '0';
-        upBtn.style.textAlign = 'left';
-        upBtn.textContent = '.. (folder nadrzędny)';
-        upBtn.addEventListener('click', () => {
-          pickerSegments.pop();
-          refreshPickerList();
-        });
-        pickerList.appendChild(upBtn);
+        items.push(makeListBtn('.. (folder nadrzędny)', () => { pickerSegments.pop(); refreshPickerList(); }));
       }
-
-      if (folders.length === 0) {
-        const empty = document.createElement('p');
-        empty.className = 'crop-hint';
-        empty.style.margin = '4px 0 0';
-        empty.textContent = 'Brak podfolderów na tym poziomie.';
-        pickerList.appendChild(empty);
-      }
-
+      if (folders.length === 0) items.push(listHint('Brak podfolderów na tym poziomie.'));
       folders.forEach(f => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'secondary-btn';
-        btn.style.marginTop = '0';
-        btn.style.textAlign = 'left';
-        btn.textContent = '📁 ' + f.name;
-        btn.addEventListener('click', () => {
-          pickerSegments.push(f.name);
-          refreshPickerList();
-        });
-        pickerList.appendChild(btn);
+        items.push(makeListBtn('📁 ' + f.name, () => { pickerSegments.push(f.name); refreshPickerList(); }));
       });
+      pickerList.replaceChildren(...items);
     } catch (e) {
-      pickerList.innerHTML = '<p class="crop-hint" style="margin:0;">Nie udało się wczytać listy folderów.</p>';
+      pickerList.replaceChildren(listHint('Nie udało się wczytać listy folderów.'));
     }
   }
 
   oneDriveFolderDisplayBtn.addEventListener('click', () => {
-    pickerSegments = getOneDriveFolderSegments().slice();
+    pickerSegments = getOneDriveFolderSegments();
     oneDrivePickerPanel.style.display = '';
     refreshPickerList();
   });
 
   pickerNewFolderBtn.addEventListener('click', async () => {
-    const name = window.prompt('Nazwa nowego folderu:');
-    if (!name || !name.trim()) return;
+    const name = (window.prompt('Nazwa nowego folderu:') || '').trim();
+    if (!name) return;
     try {
-      const token = await getMsToken(['Files.ReadWrite']);
-      if (!token) throw new Error('Brak tokenu');
-      const path = pickerPath();
-      const url = path
-        ? `https://graph.microsoft.com/v1.0/me/drive/root:/${path}:/children`
-        : `https://graph.microsoft.com/v1.0/me/drive/root/children`;
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), folder: {}, '@microsoft.graph.conflictBehavior': 'rename' })
-      });
+      const res = await createFolder(pickerPath(), name, 'rename');
       if (!res.ok) throw new Error('Nie udało się utworzyć folderu.');
       await refreshPickerList();
     } catch (e) {
@@ -1178,7 +1059,9 @@
   });
 
   pickerSelectBtn.addEventListener('click', () => {
-    setSelectedOneDriveFolder(pickerSegments.join('/'));
+    const rawPath = pickerSegments.join('/');
+    save(ONEDRIVE_FOLDER_KEY, rawPath);
+    showOneDriveFolder(rawPath);
     oneDrivePickerPanel.style.display = 'none';
   });
 
@@ -1189,37 +1072,25 @@
   // Jawnie sprawdza/tworzy wybrany folder (i podfoldery) segment po segmencie -
   // zabezpieczenie na wypadek, gdyby folder został usunięty po jego wybraniu.
   async function ensureOneDriveFolder() {
-    const token = await getMsToken(['Files.ReadWrite']);
-    if (!token) throw new Error('Brak tokenu OneDrive');
-    const segments = getOneDriveFolderSegments();
-    let encodedPath = '';
-    for (const seg of segments) {
-      const parentEncodedPath = encodedPath;
-      encodedPath = encodedPath ? `${encodedPath}/${encodeURIComponent(seg)}` : encodeURIComponent(seg);
-      const checkRes = await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${encodedPath}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (checkRes.ok) continue; // ten segment już istnieje
-      if (checkRes.status !== 404) {
-        throw new Error('Nie udało się sprawdzić folderu OneDrive: ' + checkRes.status);
+    let parent = '';
+    for (const seg of getOneDriveFolderSegments()) {
+      const path = parent ? `${parent}/${encodeURIComponent(seg)}` : encodeURIComponent(seg);
+      const checkRes = await graph(driveUrl(path));
+      if (!checkRes.ok) { // 404 = segment nie istnieje - tworzymy go
+        if (checkRes.status !== 404) {
+          throw new Error('Nie udało się sprawdzić folderu OneDrive: ' + checkRes.status);
+        }
+        const createRes = await createFolder(parent, seg, 'replace');
+        if (!createRes.ok) {
+          throw new Error('Nie udało się utworzyć folderu OneDrive: ' + createRes.status);
+        }
       }
-      const createUrl = parentEncodedPath
-        ? `https://graph.microsoft.com/v1.0/me/drive/root:/${parentEncodedPath}:/children`
-        : `https://graph.microsoft.com/v1.0/me/drive/root/children`;
-      const createRes = await fetch(createUrl, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: seg, folder: {}, '@microsoft.graph.conflictBehavior': 'replace' })
-      });
-      if (!createRes.ok) {
-        throw new Error('Nie udało się utworzyć folderu OneDrive: ' + createRes.status);
-      }
+      parent = path;
     }
   }
 
   function setMsEnabled(enabled) {
-    msSaveToggleBtn.setAttribute('aria-pressed', String(enabled));
-    try { localStorage.setItem(ONEDRIVE_ENABLED_KEY, String(enabled)); } catch (e) {}
+    setToggle(msSaveToggleBtn, ONEDRIVE_ENABLED_KEY, enabled);
     updateOneDriveFolderVisibility();
   }
 
@@ -1244,9 +1115,7 @@
       if (accounts.length > 0) {
         msalAccount = accounts[0];
         msalInstance.setActiveAccount(msalAccount);
-        let wantEnabled = true;
-        try { wantEnabled = localStorage.getItem(ONEDRIVE_ENABLED_KEY) !== 'false'; } catch (e) {}
-        if (wantEnabled) setMsEnabled(true);
+        if (load(ONEDRIVE_ENABLED_KEY) !== 'false') setMsEnabled(true);
       }
     } catch (e) { /* MSAL nie zaladowal sie poprawnie - przycisk zostanie wylaczony ponizej */ }
     updateOneDriveFolderVisibility();
@@ -1254,8 +1123,7 @@
 
   msSaveToggleBtn.addEventListener('click', async () => {
     if (!supportsMSAL) return;
-    const currentlyOn = msSaveToggleBtn.getAttribute('aria-pressed') === 'true';
-    if (currentlyOn) {
+    if (isOn(msSaveToggleBtn)) {
       setMsEnabled(false);
       return;
     }
@@ -1287,15 +1155,8 @@
 
   async function uploadToOneDrive(filename, blob) {
     await ensureOneDriveFolder();
-    const token = await getMsToken(['Files.ReadWrite']);
-    if (!token) throw new Error('Brak tokenu OneDrive');
-    const folder = getOneDriveFolder();
-    const safeName = encodeURIComponent(filename);
-    const itemPath = folder ? `${folder}/${safeName}` : safeName;
-    const res = await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${itemPath}:/content`, {
-      method: 'PUT',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/pdf' },
-      body: blob
+    const res = await graph(driveUrl(oneDriveItemPath(filename), 'content'), {
+      method: 'PUT', body: blob, contentType: 'application/pdf'
     });
     if (!res.ok) throw new Error('Upload OneDrive nieudany: ' + res.status);
   }
@@ -1303,21 +1164,14 @@
   // Dziennik .xlsx trzymany bezpośrednio w tym samym folderze OneDrive co PDF-y (odczyt-dopisz-zapis przez Graph API)
   async function appendRowToOneDriveLog(row) {
     await ensureOneDriveFolder();
-    const token = await getMsToken(['Files.ReadWrite']);
-    if (!token) throw new Error('Brak tokenu OneDrive');
-    const folder = getOneDriveFolder();
-    const logPath = folder ? `${folder}/dziennik-skanera.xlsx` : 'dziennik-skanera.xlsx';
+    const logUrl = driveUrl(oneDriveItemPath('dziennik-skanera.xlsx'), 'content');
 
     let rows = [LOG_HEADERS];
-    const getRes = await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${logPath}:/content`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
+    const getRes = await graph(logUrl);
     if (getRes.ok) {
       try {
-        const buf = await getRes.arrayBuffer();
-        const wb = XLSX.read(buf, { type: 'array' });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const existing = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        const wb = XLSX.read(await getRes.arrayBuffer(), { type: 'array' });
+        const existing = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
         if (existing.length) rows = existing;
       } catch (e) { /* nie udało się odczytać istniejącej treści - zaczynamy od nagłówków */ }
     } else if (getRes.status !== 404) {
@@ -1325,15 +1179,13 @@
     }
 
     rows.push([row.savedAt, row.filename, row.nazwa, row.opis, row.category, row.amount, row.currency, row.pages]);
-    const ws2 = XLSX.utils.aoa_to_sheet(rows);
     const wb2 = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb2, ws2, 'Dziennik');
-    const out = XLSX.write(wb2, { type: 'array', bookType: 'xlsx' });
+    XLSX.utils.book_append_sheet(wb2, XLSX.utils.aoa_to_sheet(rows), 'Dziennik');
 
-    const putRes = await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${logPath}:/content`, {
+    const putRes = await graph(logUrl, {
       method: 'PUT',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
-      body: out
+      body: XLSX.write(wb2, { type: 'array', bookType: 'xlsx' }),
+      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     });
     if (!putRes.ok) throw new Error('Zapis dziennika OneDrive nieudany: ' + putRes.status);
   }
@@ -1348,26 +1200,22 @@
   }
 
   async function sendMailGraph(filename, blob, toAddress) {
-    const token = await getMsToken(['Mail.Send']);
-    if (!token) throw new Error('Brak tokenu Mail.Send');
-    const contentBytes = await blobToBase64(blob);
-    const message = {
-      message: {
-        subject: `Skan: ${filename}`,
-        body: { contentType: 'Text', content: `W załączniku: ${filename}` },
-        toRecipients: [{ emailAddress: { address: toAddress } }],
-        attachments: [{
-          '@odata.type': '#microsoft.graph.fileAttachment',
-          name: filename,
-          contentType: 'application/pdf',
-          contentBytes
-        }]
-      }
-    };
-    const res = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+    const res = await graph(`${GRAPH_ME}/sendMail`, {
+      scope: 'Mail.Send',
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(message)
+      json: {
+        message: {
+          subject: `Skan: ${filename}`,
+          body: { contentType: 'Text', content: `W załączniku: ${filename}` },
+          toRecipients: [{ emailAddress: { address: toAddress } }],
+          attachments: [{
+            '@odata.type': '#microsoft.graph.fileAttachment',
+            name: filename,
+            contentType: 'application/pdf',
+            contentBytes: await blobToBase64(blob)
+          }]
+        }
+      }
     });
     if (!res.ok) throw new Error('Wysyłka Graph nieudana: ' + res.status);
   }
@@ -1384,7 +1232,6 @@
   const addPageBtn = document.getElementById('addPageBtn');
   const pagesNote = document.getElementById('pagesNote');
   const contrastLabelText = document.getElementById('contrastLabelText');
-  let lastPdfUrl = null;
   let pages = []; // strony dodane przed bieżącą: { dataUrl, width, height }
   let carouselIndex = 0;
 
@@ -1432,25 +1279,20 @@
   }
 
   // ---------- date / filename ----------
-  function pad(n) { return String(n).padStart(2, '0'); }
-
   function buildFilename() {
     const now = new Date(); // strefa czasowa telefonu, automatycznie
-    const manualDateValid = manualDateToggle.checked && /^\d{4}-\d{2}-\d{2}$/.test(manualDateInput.value);
-    const useManual = manualDateValid;
+    const useManual = manualDateToggle.checked && /^\d{4}-\d{2}-\d{2}$/.test(manualDateInput.value);
 
     const datePart = useManual
       ? manualDateInput.value // input[type=date] daje już format yyyy-MM-dd
-      : `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+      : fmtDate(now);
 
     let timePart = '';
     if (timeToggle.checked) {
       const manualTimeMatch = useManual && /^(\d{1,2}):(\d{2})/.exec(manualTimeInput.value);
-      if (manualTimeMatch) {
-        timePart = ` ${pad(manualTimeMatch[1])}-${pad(manualTimeMatch[2])}`;
-      } else {
-        timePart = ` ${pad(now.getHours())}-${pad(now.getMinutes())}`;
-      }
+      timePart = ' ' + (manualTimeMatch
+        ? `${pad(manualTimeMatch[1])}-${pad(manualTimeMatch[2])}`
+        : fmtTime(now, '-'));
     }
 
     const rawName = nazwaInput.value.trim();
@@ -1463,27 +1305,17 @@
 
   function prefillManualDateTime() {
     const now = new Date();
-    if (!manualDateInput.value) {
-      manualDateInput.value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-    }
-    if (!manualTimeInput.value) {
-      manualTimeInput.value = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    }
+    if (!manualDateInput.value) manualDateInput.value = fmtDate(now);
+    if (!manualTimeInput.value) manualTimeInput.value = fmtTime(now);
   }
 
   manualDateToggle.addEventListener('change', () => {
-    if (manualDateToggle.checked) {
-      prefillManualDateTime();
-      manualDateTimeRow.style.display = 'flex';
-    } else {
-      manualDateTimeRow.style.display = 'none';
-    }
+    if (manualDateToggle.checked) prefillManualDateTime();
+    manualDateTimeRow.style.display = manualDateToggle.checked ? 'flex' : 'none';
     refreshFilenamePreview();
   });
   manualDateInput.addEventListener('input', refreshFilenamePreview);
-  manualDateInput.addEventListener('change', refreshFilenamePreview);
   manualTimeInput.addEventListener('input', refreshFilenamePreview);
-  manualTimeInput.addEventListener('change', refreshFilenamePreview);
 
   nazwaInput.addEventListener('input', refreshFilenamePreview);
   timeToggle.addEventListener('change', refreshFilenamePreview);
@@ -1515,24 +1347,29 @@
     generateBtn.disabled = false;
   }
 
+  // Pokazuje karty właściwe dla ekranu: 'capture' (zdjęcie + formularz), 'crop', 'optimize'
+  function showStep(name) {
+    currentStep = name;
+    const isOptimize = name === 'optimize';
+    captureCard.style.display = isOptimize ? 'none' : '';
+    captureSection.style.display = name === 'capture' ? '' : 'none';
+    cropSection.style.display = name === 'crop' ? '' : 'none';
+    captureCardTitle.textContent = name === 'crop' ? 'KADROWANIE' : 'ZDJĘCIE';
+    formCard.style.display = name === 'capture' ? '' : 'none';
+    previewCard.style.display = isOptimize ? '' : 'none';
+    actionCard.style.display = isOptimize ? '' : 'none';
+    (isOptimize ? previewCard : captureCard).scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   function goToCaptureStep(clearForm) {
-    markStep('capture');
+    showStep('capture');
     fileInput.value = '';
     sourceImage = null;
     uncroppedImage = null;
-    document.getElementById('captureCard').style.display = '';
-    cropSection.style.display = 'none';
-    captureSection.style.display = '';
-    captureCardTitle.textContent = 'ZDJĘCIE';
-    previewCard.style.display = 'none';
-    formCard.style.display = '';
-    actionCard.style.display = 'none';
     stepIndicator.textContent = 'KROK 1/3';
     previewPdfBtn.style.display = 'none';
     pdfPreviewWrap.style.display = 'none';
-    statusMsg.textContent = '';
-    statusMsg.className = 'status';
-    if (lastPdfUrl) { URL.revokeObjectURL(lastPdfUrl); lastPdfUrl = null; }
+    showStatus('', '');
     if (clearForm) {
       nazwaInput.value = '';
       opisInput.value = '';
@@ -1546,7 +1383,6 @@
       amountInput.value = '';
     }
     resetGenerateBtn();
-    document.getElementById('captureCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   retakeBtn.addEventListener('click', () => goToCaptureStep(false));
@@ -1554,18 +1390,12 @@
 
   // ---------- crop step ----------
   const CROP_MAX_W = 1600;
-  let crop = { left: 0.04, top: 0.04, right: 0.96, bottom: 0.96 };
+  const DEFAULT_CROP = { left: 0.04, top: 0.04, right: 0.96, bottom: 0.96 };
+  let crop = { ...DEFAULT_CROP };
   const MIN_SIZE = 0.12;
 
   function showCropStep(keepExistingCrop) {
-    markStep('crop');
-    document.getElementById('captureCard').style.display = '';
-    previewCard.style.display = 'none';
-    formCard.style.display = 'none';
-    actionCard.style.display = 'none';
-    captureSection.style.display = 'none';
-    cropSection.style.display = '';
-    captureCardTitle.textContent = 'KADROWANIE';
+    showStep('crop');
     stepIndicator.textContent = pages.length > 0 ? `KROK 1/3 · STRONA ${pages.length + 1} · KADROWANIE` : 'KROK 1/3 · KADROWANIE';
 
     const scale = Math.min(1, CROP_MAX_W / uncroppedImage.naturalWidth);
@@ -1579,16 +1409,10 @@
     } else {
       runAutoDetect();
     }
-    document.getElementById('captureCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function runAutoDetect() {
-    const detected = estimateAutoCrop(cropCanvas);
-    if (detected) {
-      crop = detected;
-    } else {
-      crop = { left: 0.04, top: 0.04, right: 0.96, bottom: 0.96 };
-    }
+    crop = estimateAutoCrop(cropCanvas) || { ...DEFAULT_CROP };
     updateCropBoxStyle();
   }
 
@@ -1771,8 +1595,6 @@
     cropBox.style.height = ((crop.bottom - crop.top) * 100) + '%';
   }
 
-  function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
-
   function pointFromEvent(e) {
     const rect = cropShell.getBoundingClientRect();
     return {
@@ -1793,19 +1615,11 @@
     handle.addEventListener('pointermove', (e) => {
       if (!activeCorner) return;
       const p = pointFromEvent(e);
-      if (activeCorner === 'tl') {
-        crop.left = clamp(p.x, 0, crop.right - MIN_SIZE);
-        crop.top = clamp(p.y, 0, crop.bottom - MIN_SIZE);
-      } else if (activeCorner === 'tr') {
-        crop.right = clamp(p.x, crop.left + MIN_SIZE, 1);
-        crop.top = clamp(p.y, 0, crop.bottom - MIN_SIZE);
-      } else if (activeCorner === 'bl') {
-        crop.left = clamp(p.x, 0, crop.right - MIN_SIZE);
-        crop.bottom = clamp(p.y, crop.top + MIN_SIZE, 1);
-      } else if (activeCorner === 'br') {
-        crop.right = clamp(p.x, crop.left + MIN_SIZE, 1);
-        crop.bottom = clamp(p.y, crop.top + MIN_SIZE, 1);
-      }
+      // róg to para liter: t/b (góra/dół) + l/r (lewo/prawo)
+      if (activeCorner.includes('l')) crop.left = clamp(p.x, 0, crop.right - MIN_SIZE);
+      if (activeCorner.includes('r')) crop.right = clamp(p.x, crop.left + MIN_SIZE, 1);
+      if (activeCorner.includes('t')) crop.top = clamp(p.y, 0, crop.bottom - MIN_SIZE);
+      if (activeCorner.includes('b')) crop.bottom = clamp(p.y, crop.top + MIN_SIZE, 1);
       updateCropBoxStyle();
     });
     handle.addEventListener('pointerup', () => { activeCorner = null; });
@@ -1866,19 +1680,12 @@
   });
 
   function proceedToOptimize() {
-    markStep('optimize');
-    document.getElementById('captureCard').style.display = 'none';
-    previewCard.style.display = '';
-    formCard.style.display = 'none';
-    actionCard.style.display = '';
+    showStep('optimize');
     stepIndicator.textContent = pages.length > 0 ? `KROK 2/3 · STRONA ${pages.length + 1}` : 'KROK 2/3';
-    contrastSlider.value = 0;
-    contrastValue.textContent = '0';
-    setFilter('bw');
+    setFilter('bw'); // resetuje też suwak kontrastu
     refreshFilenamePreview();
     updateGenerateLabel();
     updateCarousel();
-    previewCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function updateGenerateLabel() {
@@ -1927,7 +1734,7 @@
   // ---------- image processing ----------
   function setFilter(name) {
     currentFilter = name;
-    filterBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.filter === name)));
+    filterBtns.forEach(b => setOn(b, b.dataset.filter === name));
     contrastLabelText.textContent = name === 'bw' ? 'Czułość progu (skan)' : 'Kontrast';
     contrastSlider.value = 0;
     contrastValue.textContent = '0';
@@ -1954,15 +1761,12 @@
       // Domyślnie łagodniejsza niż poprzednio + płynne przejście na krawędziach liter,
       // żeby tekst pozostał czytelny zamiast "postrzępionego" twardego czarno-białego.
       const sensitivity = 0.075 + (Number(contrastSlider.value) * 0.0016); // ok. 0.01 .. 0.2
-      applyAdaptiveBinarization(w, h, Math.max(0.01, Math.min(0.22, sensitivity)));
+      applyAdaptiveBinarization(w, h, clamp(sensitivity, 0.01, 0.22));
     } else {
-      const baseAmount = currentFilter === 'gray' ? 25 : 0;
-      const baseBrightness = currentFilter === 'gray' ? 6 : 0;
-      const sliderAdjust = Number(contrastSlider.value);
-      const amount = Math.max(-250, Math.min(250, baseAmount + sliderAdjust));
       const toGray = currentFilter === 'gray';
+      const amount = clamp((toGray ? 25 : 0) + Number(contrastSlider.value), -250, 250);
       if (toGray || amount !== 0) {
-        applyContrastBrightness(w, h, toGray, amount, baseBrightness);
+        applyContrastBrightness(w, h, toGray, amount, toGray ? 6 : 0);
       }
     }
   }
@@ -1973,16 +1777,11 @@
     const imgData = ctx.getImageData(0, 0, w, h);
     const d = imgData.data;
     const factor = (259 * (amount + 255)) / (255 * (259 - amount));
+    const adjust = (v) => clamp(factor * (v - 128) + 128 + brightness, 0, 255);
     for (let i = 0; i < d.length; i += 4) {
       let r = d[i], g = d[i + 1], b = d[i + 2];
-      if (toGray) {
-        const gray = 0.299 * r + 0.587 * g + 0.114 * b;
-        r = g = b = gray;
-      }
-      r = Math.max(0, Math.min(255, factor * (r - 128) + 128 + brightness));
-      g = Math.max(0, Math.min(255, factor * (g - 128) + 128 + brightness));
-      b = Math.max(0, Math.min(255, factor * (b - 128) + 128 + brightness));
-      d[i] = r; d[i + 1] = g; d[i + 2] = b;
+      if (toGray) r = g = b = 0.299 * r + 0.587 * g + 0.114 * b;
+      d[i] = adjust(r); d[i + 1] = adjust(g); d[i + 2] = adjust(b);
     }
     ctx.putImageData(imgData, 0, 0);
   }
@@ -2069,25 +1868,27 @@
         return t + '...';
       };
 
-      let lineY = d.stampTop;
-      if (d.isMulti) {
-        pctx.fillText(`Strona ${d.pageIndex} z ${d.pageTotal}`, d.margin * k, lineY * k);
-        lineY += 6;
-      }
-      if (d.category) {
-        pctx.fillText(`Płatność: ${d.category}`, d.margin * k, lineY * k);
-        lineY += 6;
-      }
-      if (d.amountLine) {
-        pctx.fillText(d.amountLine, d.margin * k, lineY * k);
-        lineY += 6;
-      }
-      pctx.fillText(fitLine(`Plik: ${d.filename}`), d.margin * k, lineY * k); lineY += 6;
-      pctx.fillText(fitLine(`Notatka: ${d.opis.length ? d.opis : '—'}`), d.margin * k, lineY * k); lineY += 6;
-      pctx.fillText(`Zapisano (lokalnie): ${d.savedAt}`, d.margin * k, lineY * k); lineY += 6;
-      pctx.fillText(`Zapisano (czas PL): ${d.savedAtPL}`, d.margin * k, lineY * k);
+      d.lines.forEach((text, i) => {
+        pctx.fillText(fitLine(text), d.margin * k, (d.stampTop + i * STAMP_LINE_H) * k);
+      });
     };
     pageImg.src = d.imgData;
+  }
+
+  // Linie stempla w stopce strony PDF - wspólne dla jsPDF i podglądu na canvasie
+  const STAMP_LINE_H = 6; // mm
+  function stampLines(s, pageNo) {
+    const lines = [];
+    if (s.pageTotal > 1) lines.push(`Strona ${pageNo} z ${s.pageTotal}`);
+    if (s.category) lines.push(`Płatność: ${s.category}`);
+    if (s.amountLine) lines.push(s.amountLine);
+    lines.push(
+      `Plik: ${s.filename}`,
+      `Notatka: ${s.opis || '—'}`,
+      `Zapisano (lokalnie): ${s.savedAt}`,
+      `Zapisano (czas PL): ${s.savedAtPL}`
+    );
+    return lines;
   }
 
   generateBtn.dataset.mode = 'generate';
@@ -2111,47 +1912,49 @@
         { dataUrl: previewCanvas.toDataURL('image/jpeg', 0.92), width: previewCanvas.width, height: previewCanvas.height }
       ];
       const isMulti = allPages.length > 1;
-      const amountLine = getAmountLine();
-      const lineCount = 4 + (isMulti ? 1 : 0) + (selectedCategory ? 1 : 0) + (amountLine ? 1 : 0);
-
-      const pageW = 210, pageH = 297; // A4 mm
-      const margin = 10;
-      const footerH = 6 * lineCount + 4; // miejsce na stempel, rośnie z liczbą linii
-      const availW = pageW - margin * 2;
-      const availH = pageH - margin * 2 - footerH;
-      const stampTop = pageH - margin - footerH + 6;
-      const stampMaxW = pageW - margin * 2;
 
       const filename = buildFilename();
       const nazwa = nazwaInput.value.trim() || 'Dokument';
       const opis = opisInput.value.trim();
       const now = new Date();
-      const savedAt = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} `
-        + `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-      // sv-SE daje format YYYY-MM-DD HH:mm:ss niezależnie od strefy telefonu
-      const savedAtPL = now.toLocaleString('sv-SE', { timeZone: 'Europe/Warsaw' });
+      const savedAt = `${fmtDate(now)} ${fmtTime(now)}:${pad(now.getSeconds())}`;
+      const stamp = {
+        pageTotal: allPages.length, category: selectedCategory, amountLine: getAmountLine(),
+        filename, opis, savedAt,
+        // sv-SE daje format YYYY-MM-DD HH:mm:ss niezależnie od strefy telefonu
+        savedAtPL: now.toLocaleString('sv-SE', { timeZone: 'Europe/Warsaw' })
+      };
+      const lineCount = stampLines(stamp, 1).length;
+
+      const pageW = 210, pageH = 297; // A4 mm
+      const margin = 10;
+      const footerH = STAMP_LINE_H * lineCount + 4; // miejsce na stempel, rośnie z liczbą linii
+      const availW = pageW - margin * 2;
+      const availH = pageH - margin * 2 - footerH;
+      const stampTop = pageH - margin - footerH + 6;
+
+      // obraz strony wpasowany w obszar nad stopką, wyśrodkowany w poziomie
+      const place = (p) => {
+        const ratio = p.width / p.height;
+        let drawW = availW;
+        let drawH = drawW / ratio;
+        if (drawH > availH) { drawH = availH; drawW = drawH * ratio; }
+        return { x: (pageW - drawW) / 2, y: margin, drawW, drawH };
+      };
 
       const doc = new jsPDF({ unit: 'mm', format: 'a4' });
       const keywords = filename + (selectedCategory ? `, ${selectedCategory}` : '');
       doc.setProperties({ title: nazwa, subject: opis, keywords, creator: 'Skaner dokumentów' });
 
       const fitOneLine = (text) => {
-        const lines = doc.splitTextToSize(text, stampMaxW);
+        const lines = doc.splitTextToSize(text, availW);
         return lines.length > 1 ? lines[0].replace(/.{3}$/, '...') : lines[0];
       };
-
-      let lastDrawParams = null;
 
       allPages.forEach((p, idx) => {
         if (idx > 0) doc.addPage();
 
-        const ratio = p.width / p.height;
-        let drawW = availW;
-        let drawH = drawW / ratio;
-        if (drawH > availH) { drawH = availH; drawW = drawH * ratio; }
-        const x = (pageW - drawW) / 2;
-        const y = margin;
-
+        const { x, y, drawW, drawH } = place(p);
         doc.addImage(p.dataUrl, 'JPEG', x, y, drawW, drawH);
 
         doc.setDrawColor(218, 220, 224);
@@ -2162,64 +1965,33 @@
         doc.setFontSize(10.5);
         doc.setTextColor(95, 99, 104);
 
-        let lineY = stampTop;
-        if (isMulti) {
-          doc.text(`Strona ${idx + 1} z ${allPages.length}`, margin, lineY);
-          lineY += 6;
-        }
-        if (selectedCategory) {
-          doc.text(`Płatność: ${selectedCategory}`, margin, lineY);
-          lineY += 6;
-        }
-        if (amountLine) {
-          doc.text(amountLine, margin, lineY);
-          lineY += 6;
-        }
-        doc.text(fitOneLine(`Plik: ${filename}`), margin, lineY); lineY += 6;
-        doc.text(fitOneLine(`Notatka: ${opis.length ? opis : '—'}`), margin, lineY); lineY += 6;
-        doc.text(`Zapisano (lokalnie): ${savedAt}`, margin, lineY); lineY += 6;
-        doc.text(`Zapisano (czas PL): ${savedAtPL}`, margin, lineY);
-
-        if (idx === allPages.length - 1) {
-          lastDrawParams = { dataUrl: p.dataUrl, x, y, drawW, drawH };
-        }
+        stampLines(stamp, idx + 1).forEach((text, i) => {
+          doc.text(fitOneLine(text), margin, stampTop + i * STAMP_LINE_H);
+        });
       });
 
       const blob = doc.output('blob');
-
-      if (lastPdfUrl) URL.revokeObjectURL(lastPdfUrl);
-      lastPdfUrl = URL.createObjectURL(blob);
       previewPdfBtn.style.display = '';
 
-      if (isMulti) {
-        pagesNote.textContent = `Podgląd pokazuje ostatnią z ${allPages.length} stron dokumentu.`;
-        pagesNote.style.display = '';
-      } else {
-        pagesNote.style.display = 'none';
-      }
+      pagesNote.textContent = `Podgląd pokazuje ostatnią z ${allPages.length} stron dokumentu.`;
+      pagesNote.style.display = isMulti ? '' : 'none';
 
+      const lastPage = allPages[allPages.length - 1];
       renderPdfPreviewMock({
-        imgData: lastDrawParams.dataUrl, x: lastDrawParams.x, y: lastDrawParams.y,
-        drawW: lastDrawParams.drawW, drawH: lastDrawParams.drawH,
-        pageW, pageH, margin, stampTop, filename, opis, savedAt, savedAtPL,
-        isMulti, pageIndex: allPages.length, pageTotal: allPages.length, category: selectedCategory, amountLine
+        imgData: lastPage.dataUrl, ...place(lastPage),
+        pageW, pageH, margin, stampTop, lines: stampLines(stamp, allPages.length)
       });
 
-      const localSaveEnabled = localSaveToggleBtn.getAttribute('aria-pressed') === 'true';
-      const msSaveEnabled = supportsMSAL && msSaveToggleBtn.getAttribute('aria-pressed') === 'true' && !!msalAccount;
+      const localSaveEnabled = isOn(localSaveToggleBtn);
+      const msSaveEnabled = supportsMSAL && isOn(msSaveToggleBtn) && !!msalAccount;
 
       if (!localSaveEnabled && !msSaveEnabled) {
         showStatus('Włącz przynajmniej jedną opcję zapisu (telefon lub Microsoft).', 'err');
-        generateBtn.disabled = false;
         return;
       }
 
       const savedParts = [];
-      let localOk = true;
-      if (localSaveEnabled) {
-        localOk = await saveFile(filename, blob);
-        if (localOk) savedParts.push('telefon');
-      }
+      if (localSaveEnabled && await saveFile(filename, blob)) savedParts.push('telefon');
 
       let msOk = false;
       if (msSaveEnabled) {
@@ -2232,12 +2004,11 @@
         }
       }
 
-      if ((localSaveEnabled && localOk) || (msSaveEnabled && msOk)) {
+      if (savedParts.length > 0) {
         showStatus(`Zapisano (${savedParts.join(' + ')}): ${filename}${isMulti ? ` (${allPages.length} str.)` : ''}`, 'ok');
         generateBtn.textContent = 'Zrób nowy skan';
         generateBtn.classList.add('is-done');
         generateBtn.dataset.mode = 'reset';
-        generateBtn.disabled = false;
 
         const rawAmount = amountInput.value.trim();
         const logRow = {
@@ -2246,10 +2017,9 @@
           pages: allPages.length
         };
         appendLocalLogEntry(logRow);
-        if (emailToggleBtn.getAttribute('aria-pressed') === 'true') {
+        if (isOn(emailToggleBtn)) {
           const addr = getEmailAddress();
-          const emailValid = isValidEmail(addr);
-          if (msalAccount && emailValid) {
+          if (msalAccount && isValidEmail(addr)) {
             sendMailGraph(filename, blob, addr)
               .then(() => showStatus(`Zapisano i wysłano e-mailem: ${filename}`, 'ok'))
               .catch(() => openEmailDraft(filename)); // nie udało się przez Graph - zostaw szkic jako zapasową opcję
@@ -2257,12 +2027,11 @@
             openEmailDraft(filename);
           }
         }
-        if (msSaveEnabled && msOk) {
+        if (msOk) {
           appendRowToOneDriveLog(logRow).catch(() => {
             showStatus('Zapisano, ale nie udało się dopisać do dziennika na OneDrive.', 'err');
           });
         }
-        return;
       } else {
         showStatus('Nie udało się zapisać pliku. Spróbuj ponownie.', 'err');
       }
