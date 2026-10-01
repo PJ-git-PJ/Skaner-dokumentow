@@ -513,21 +513,23 @@
     <label style="margin-top:20px;">Zapisywanie po wygenerowaniu PDF</label>
     <button type="button" class="secondary-btn" id="emailToggleBtn" aria-pressed="false" style="margin-top:0;">Wyślij e-mailem</button>
     <button type="button" class="secondary-btn" id="localSaveToggleBtn" aria-pressed="true">Zapis w telefonie</button>
-    <button type="button" class="secondary-btn" id="msSaveToggleBtn" aria-pressed="false">Zapis OneDrive</button>
+    <label style="margin-top:20px;">Zapis do folderów OneDrive</label>
+    <div class="category-row" id="oneDriveRow" style="margin-bottom:6px;">
+      <button type="button" class="cat-btn od-btn" aria-pressed="false">Folder 1</button>
+      <button type="button" class="cat-btn od-btn" aria-pressed="false">Folder 2</button>
+      <button type="button" class="cat-btn od-btn" aria-pressed="false">Folder 3</button>
+      <button type="button" class="cat-btn od-btn" aria-pressed="false">Folder 4</button>
+    </div>
     <p class="crop-hint" id="msAccountText" style="display:none;"></p>
-    <div id="oneDriveFolderRow" style="display:none;">
-      <label>Folder na OneDrive</label>
-      <button type="button" class="secondary-btn" id="oneDriveFolderDisplayBtn" style="margin-top:0; text-align:left;">📁 Skaner dokumentow</button>
+    <p class="crop-hint" id="oneDriveActiveFolderText" style="display:none; text-align:left; margin-top:4px;"></p>
 
-      <div class="picker-panel" id="oneDrivePickerPanel" style="display:none; margin-top:10px;">
-        <p class="crop-hint" id="pickerPathText" style="margin:0 0 10px; text-align:left;">Dysk główny</p>
-        <div class="picker-list" id="pickerList"></div>
-        <button type="button" class="secondary-btn" id="pickerNewFolderBtn" style="margin-top:10px;">+ Nowy folder tutaj</button>
-        <button type="button" class="primary-btn" id="pickerSelectBtn" style="margin-top:10px;">Wybierz ten folder</button>
-        <button type="button" class="retake" id="pickerCancelBtn">Anuluj</button>
-      </div>
-
-      <p class="crop-hint" style="text-align:left; margin-top:6px;">W tym folderze będą zapisywane PDF-y i dziennik .xlsx (dziennik dotyczy tylko zapisu przez Microsoft).</p>
+    <div class="picker-panel" id="oneDrivePickerPanel" style="display:none; margin-top:10px;">
+      <p class="crop-hint" id="pickerTitleText" style="margin:0 0 4px; text-align:left; font-weight:700;"></p>
+      <p class="crop-hint" id="pickerPathText" style="margin:0 0 10px; text-align:left;">Dysk główny</p>
+      <div class="picker-list" id="pickerList"></div>
+      <button type="button" class="secondary-btn" id="pickerNewFolderBtn" style="margin-top:10px;">+ Nowy folder tutaj</button>
+      <button type="button" class="primary-btn" id="pickerSelectBtn" style="margin-top:10px;">Wybierz ten folder</button>
+      <button type="button" class="retake" id="pickerCancelBtn">Anuluj</button>
     </div>
 
     <div class="filename-stub">
@@ -741,6 +743,7 @@
     const items = filtered.map(code => makeListBtn(code, () => {
       setSelectedCurrency(code);
       currencyPickerPanel.style.display = 'none';
+      refreshFilenamePreview();
     }, code === current));
     currencyList.replaceChildren(...(items.length ? items : [listHint('Brak wyników.')]));
   }
@@ -898,7 +901,7 @@
   const statusMsg = document.getElementById('statusMsg');
 
   // ---------- dziennik zapisów (Excel) - lokalny zapas na wypadek braku logowania Microsoft ----------
-  const LOG_HEADERS = ['Data zapisu', 'Plik', 'Nazwa', 'Opis', 'Płatność', 'Kwota', 'Waluta', 'Liczba stron'];
+  const LOG_HEADERS = ['Data zapisu', 'Plik', 'Nazwa', 'Opis', 'Płatność', 'Kwota', 'Waluta', 'Liczba stron', 'Przycisk OneDrive', 'Folder OneDrive'];
   const LOCAL_LOG_KEY = 'skanerLogEntries';
 
   const isTopLevel = (() => {
@@ -927,20 +930,20 @@
     }
     return window.location.origin + path;
   }
-  const msSaveToggleBtn = document.getElementById('msSaveToggleBtn');
+  const oneDriveBtns = document.querySelectorAll('.od-btn');
   const localSaveToggleBtn = document.getElementById('localSaveToggleBtn');
   const msAccountText = document.getElementById('msAccountText');
-  const oneDriveFolderRow = document.getElementById('oneDriveFolderRow');
-  const oneDriveFolderDisplayBtn = document.getElementById('oneDriveFolderDisplayBtn');
+  const oneDriveActiveFolderText = document.getElementById('oneDriveActiveFolderText');
   const oneDrivePickerPanel = document.getElementById('oneDrivePickerPanel');
+  const pickerTitleText = document.getElementById('pickerTitleText');
   const pickerPathText = document.getElementById('pickerPathText');
   const pickerList = document.getElementById('pickerList');
   const pickerNewFolderBtn = document.getElementById('pickerNewFolderBtn');
   const pickerSelectBtn = document.getElementById('pickerSelectBtn');
   const pickerCancelBtn = document.getElementById('pickerCancelBtn');
-  const ONEDRIVE_FOLDER_KEY = 'skanerOneDriveFolder';
+  const ONEDRIVE_SLOTS_KEY = 'skanerOneDriveSlots';
+  const ONEDRIVE_SELECTED_SLOT_KEY = 'skanerOneDriveSelectedSlot';
   const ONEDRIVE_DEFAULT_FOLDER = 'Skaner dokumentow';
-  const ONEDRIVE_ENABLED_KEY = 'skanerOneDriveEnabled';
   const LOCAL_SAVE_ENABLED_KEY = 'skanerLocalSaveEnabled';
 
   let msalInstance = null;
@@ -953,9 +956,31 @@
     setToggle(localSaveToggleBtn, LOCAL_SAVE_ENABLED_KEY, !isOn(localSaveToggleBtn));
   });
 
+  // ---------- cztery przyciski zapisu OneDrive: nazwa + folder, wybierane alternatywnie ----------
+  let oneDriveSlots = Array.from(oneDriveBtns, b => ({ label: b.textContent, folder: ONEDRIVE_DEFAULT_FOLDER }));
+  try {
+    const saved = JSON.parse(load(ONEDRIVE_SLOTS_KEY, 'null'));
+    if (Array.isArray(saved) && saved.length === oneDriveSlots.length) {
+      oneDriveSlots = oneDriveSlots.map((def, i) => ({
+        label: (saved[i] && saved[i].label) || def.label,
+        folder: saved[i] && typeof saved[i].folder === 'string' ? saved[i].folder : def.folder
+      }));
+    }
+  } catch (e) { /* zignoruj uszkodzony zapis */ }
+  oneDriveBtns.forEach((b, i) => { b.textContent = oneDriveSlots[i].label; });
+
+  let selectedOneDriveSlot = null; // indeks wybranego przycisku albo null (zapis na OneDrive wyłączony)
+
+  function saveOneDriveSlots() { save(ONEDRIVE_SLOTS_KEY, JSON.stringify(oneDriveSlots)); }
+  function folderSegments(raw) { return (raw || '').split('/').map(s => s.trim()).filter(Boolean); }
   function getOneDriveFolderSegments() {
-    const raw = load(ONEDRIVE_FOLDER_KEY, ONEDRIVE_DEFAULT_FOLDER); // nic jeszcze nie wybrano - domyślny folder
-    return raw.split('/').map(s => s.trim()).filter(Boolean);
+    return selectedOneDriveSlot === null ? [] : folderSegments(oneDriveSlots[selectedOneDriveSlot].folder);
+  }
+  // nazwa i folder wybranego przycisku (do metryki PDF i dziennika Excel); null, gdy OneDrive wyłączony
+  function getActiveOneDriveInfo() {
+    if (selectedOneDriveSlot === null) return null;
+    const slot = oneDriveSlots[selectedOneDriveSlot];
+    return { label: slot.label, folder: folderSegments(slot.folder).join('/') || 'Dysk główny' };
   }
 
   // zakodowana ścieżka pliku w wybranym folderze OneDrive
@@ -963,21 +988,23 @@
     return [...getOneDriveFolderSegments(), filename].map(encodeURIComponent).join('/');
   }
 
-  function showOneDriveFolder(rawPath) {
-    oneDriveFolderDisplayBtn.textContent = '📁 ' + (rawPath || 'Dysk główny (bez podfolderu)');
-  }
-  showOneDriveFolder(getOneDriveFolderSegments().join('/'));
-
-  function updateOneDriveFolderVisibility() {
-    const enabled = isOn(msSaveToggleBtn);
-    oneDriveFolderRow.style.display = enabled ? '' : 'none';
-    if (!enabled) oneDrivePickerPanel.style.display = 'none';
-    if (enabled && msalAccount) {
+  function updateOneDriveStatus() {
+    const info = getActiveOneDriveInfo();
+    if (info && msalAccount) {
       msAccountText.textContent = `Zalogowano jako: ${msalAccount.username}`;
       msAccountText.style.display = '';
     } else {
       msAccountText.style.display = 'none';
     }
+    oneDriveActiveFolderText.textContent = info ? `📁 ${info.label} → ${info.folder}` : '';
+    oneDriveActiveFolderText.style.display = info ? '' : 'none';
+  }
+
+  function selectOneDriveSlot(i) {
+    oneDriveBtns.forEach((b, j) => setOn(b, j === i));
+    selectedOneDriveSlot = i;
+    save(ONEDRIVE_SELECTED_SLOT_KEY, i === null ? '' : String(i));
+    updateOneDriveStatus();
   }
 
   // ---------- Microsoft Graph ----------
@@ -1040,11 +1067,16 @@
     }
   }
 
-  oneDriveFolderDisplayBtn.addEventListener('click', () => {
-    pickerSegments = getOneDriveFolderSegments();
+  let pickerEditingSlot = null; // przycisk, któremu przypisujemy folder
+
+  function openFolderPickerForSlot(i) {
+    pickerEditingSlot = i;
+    pickerSegments = folderSegments(oneDriveSlots[i].folder);
+    pickerTitleText.textContent = `Folder dla przycisku: ${oneDriveSlots[i].label}`;
     oneDrivePickerPanel.style.display = '';
+    oneDrivePickerPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     refreshPickerList();
-  });
+  }
 
   pickerNewFolderBtn.addEventListener('click', async () => {
     const name = (window.prompt('Nazwa nowego folderu:') || '').trim();
@@ -1059,9 +1091,11 @@
   });
 
   pickerSelectBtn.addEventListener('click', () => {
-    const rawPath = pickerSegments.join('/');
-    save(ONEDRIVE_FOLDER_KEY, rawPath);
-    showOneDriveFolder(rawPath);
+    if (pickerEditingSlot !== null) {
+      oneDriveSlots[pickerEditingSlot].folder = pickerSegments.join('/');
+      saveOneDriveSlots();
+      updateOneDriveStatus();
+    }
     oneDrivePickerPanel.style.display = 'none';
   });
 
@@ -1089,16 +1123,11 @@
     }
   }
 
-  function setMsEnabled(enabled) {
-    setToggle(msSaveToggleBtn, ONEDRIVE_ENABLED_KEY, enabled);
-    updateOneDriveFolderVisibility();
-  }
-
   (async () => {
     if (!supportsMSAL) {
-      msSaveToggleBtn.textContent = 'Zapis OneDrive niedostępny tutaj';
-      msSaveToggleBtn.disabled = true;
-      updateOneDriveFolderVisibility();
+      oneDriveBtns.forEach(b => { b.disabled = true; });
+      msAccountText.textContent = 'Zapis OneDrive niedostępny w tym widoku.';
+      msAccountText.style.display = '';
       return;
     }
     try {
@@ -1115,30 +1144,49 @@
       if (accounts.length > 0) {
         msalAccount = accounts[0];
         msalInstance.setActiveAccount(msalAccount);
-        if (load(ONEDRIVE_ENABLED_KEY) !== 'false') setMsEnabled(true);
+        const savedSlot = parseInt(load(ONEDRIVE_SELECTED_SLOT_KEY, ''), 10);
+        if (savedSlot >= 0 && savedSlot < oneDriveBtns.length) selectOneDriveSlot(savedSlot);
       }
-    } catch (e) { /* MSAL nie zaladowal sie poprawnie - przycisk zostanie wylaczony ponizej */ }
-    updateOneDriveFolderVisibility();
+    } catch (e) { /* MSAL nie zaladowal sie poprawnie */ }
+    updateOneDriveStatus();
   })();
 
-  msSaveToggleBtn.addEventListener('click', async () => {
-    if (!supportsMSAL) return;
-    if (isOn(msSaveToggleBtn)) {
-      setMsEnabled(false);
-      return;
+  async function ensureMsLogin() {
+    if (!supportsMSAL || !msalInstance) return false;
+    if (msalAccount) return true;
+    try {
+      const result = await msalInstance.loginPopup({ scopes: ['Files.ReadWrite', 'Mail.Send'] });
+      msalAccount = result.account;
+      msalInstance.setActiveAccount(msalAccount);
+      return true;
+    } catch (e) {
+      showStatus('Logowanie Microsoft nie powiodło się.', 'err');
+      return false;
     }
-    if (!msalAccount) {
-      try {
-        const result = await msalInstance.loginPopup({ scopes: ['Files.ReadWrite', 'Mail.Send'] });
-        msalAccount = result.account;
-        msalInstance.setActiveAccount(msalAccount);
-      } catch (e) {
-        showStatus('Logowanie Microsoft nie powiodło się.', 'err');
-        return;
-      }
+  }
+
+  function renameOneDriveSlot(i) {
+    const current = oneDriveSlots[i].label;
+    const next = window.prompt('Nowa nazwa tego przycisku:', current);
+    if (next === null) return;
+    const trimmed = next.trim();
+    if (!trimmed || trimmed === current) return;
+    oneDriveSlots[i].label = trimmed;
+    oneDriveBtns[i].textContent = trimmed;
+    saveOneDriveSlots();
+    updateOneDriveStatus();
+  }
+
+  oneDriveBtns.forEach((btn, i) => onPress(btn, {
+    longPress: async () => {
+      renameOneDriveSlot(i);
+      if (await ensureMsLogin()) openFolderPickerForSlot(i);
+    },
+    tap: async () => {
+      if (isOn(btn)) { selectOneDriveSlot(null); return; }
+      if (await ensureMsLogin()) selectOneDriveSlot(i);
     }
-    setMsEnabled(true);
-  });
+  }));
 
   async function getMsToken(scopes) {
     if (!msalInstance || !msalAccount) return null;
@@ -1172,13 +1220,16 @@
       try {
         const wb = XLSX.read(await getRes.arrayBuffer(), { type: 'array' });
         const existing = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
-        if (existing.length) rows = existing;
+        if (existing.length) {
+          rows = existing;
+          rows[0] = LOG_HEADERS; // starsze dzienniki nie mają kolumn OneDrive
+        }
       } catch (e) { /* nie udało się odczytać istniejącej treści - zaczynamy od nagłówków */ }
     } else if (getRes.status !== 404) {
       throw new Error('Odczyt dziennika OneDrive nieudany: ' + getRes.status);
     }
 
-    rows.push([row.savedAt, row.filename, row.nazwa, row.opis, row.category, row.amount, row.currency, row.pages]);
+    rows.push([row.savedAt, row.filename, row.nazwa, row.opis, row.category, row.amount, row.currency, row.pages, row.oneDriveLabel, row.oneDriveFolder]);
     const wb2 = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb2, XLSX.utils.aoa_to_sheet(rows), 'Dziennik');
 
@@ -1298,7 +1349,9 @@
     const rawName = nazwaInput.value.trim();
     const safeName = rawName.replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim();
     const namePart = safeName.length ? safeName : 'Dokument';
-    return `${datePart}${timePart} ${namePart}.pdf`;
+    const amountLine = getAmountLine(); // "Kwota: 12,50 PLN" albo null, gdy kwota wyłączona/pusta
+    const amountPart = amountLine ? ' ' + amountLine.replace('Kwota: ', '') : '';
+    return `${datePart}${timePart} ${namePart}${amountPart}.pdf`;
   }
 
   function refreshFilenamePreview() { filenamePreview.textContent = buildFilename(); }
@@ -1319,6 +1372,9 @@
 
   nazwaInput.addEventListener('input', refreshFilenamePreview);
   timeToggle.addEventListener('change', refreshFilenamePreview);
+  amountInput.addEventListener('input', refreshFilenamePreview);
+  amountInput.addEventListener('blur', refreshFilenamePreview);
+  currencyToggleBtn.addEventListener('click', refreshFilenamePreview);
 
   // ---------- capture ----------
   fileInput.addEventListener('change', (e) => {
@@ -1882,6 +1938,7 @@
     if (s.pageTotal > 1) lines.push(`Strona ${pageNo} z ${s.pageTotal}`);
     if (s.category) lines.push(`Płatność: ${s.category}`);
     if (s.amountLine) lines.push(s.amountLine);
+    if (s.oneDrive) lines.push(`OneDrive: ${s.oneDrive.label} → ${s.oneDrive.folder}`);
     lines.push(
       `Plik: ${s.filename}`,
       `Notatka: ${s.opis || '—'}`,
@@ -1939,8 +1996,11 @@
       const opis = opisInput.value.trim();
       const now = new Date();
       const savedAt = `${fmtDate(now)} ${fmtTime(now)}:${pad(now.getSeconds())}`;
+      const msSaveEnabled = supportsMSAL && selectedOneDriveSlot !== null && !!msalAccount;
+      const oneDriveInfo = msSaveEnabled ? getActiveOneDriveInfo() : null;
       const stamp = {
         pageTotal: allPages.length, category: selectedCategory, amountLine: getAmountLine(),
+        oneDrive: oneDriveInfo,
         filename, opis, savedAt,
         // sv-SE daje format YYYY-MM-DD HH:mm:ss niezależnie od strefy telefonu
         savedAtPL: now.toLocaleString('sv-SE', { timeZone: 'Europe/Warsaw' })
@@ -2012,8 +2072,6 @@
       });
 
       const localSaveEnabled = isOn(localSaveToggleBtn);
-      const msSaveEnabled = supportsMSAL && isOn(msSaveToggleBtn) && !!msalAccount;
-
       if (!localSaveEnabled && !msSaveEnabled) {
         showStatus('Włącz przynajmniej jedną opcję zapisu (telefon lub Microsoft).', 'err');
         return;
@@ -2043,7 +2101,9 @@
         const logRow = {
           savedAt, filename, nazwa, opis, category: selectedCategory || '',
           amount: rawAmount, currency: rawAmount ? getSelectedCurrency() : '',
-          pages: allPages.length
+          pages: allPages.length,
+          oneDriveLabel: oneDriveInfo ? oneDriveInfo.label : '',
+          oneDriveFolder: oneDriveInfo ? oneDriveInfo.folder : ''
         };
         appendLocalLogEntry(logRow);
         if (isOn(emailToggleBtn)) {
