@@ -1891,6 +1891,27 @@
     return lines;
   }
 
+  // Czcionka do stopki PDF z pełnym wsparciem polskich znaków - jsPDF 'courier'
+  // to standardowa czcionka PDF (WinAnsi) i nie ma w niej ą/ć/ę/ł/ń/ś/ź/ż, co
+  // psuje też rozstaw liter (jsPDF nie zna szerokości brakującego znaku).
+  const STAMP_FONT_URL = 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/spacemono/SpaceMono-Regular.ttf';
+  const STAMP_FONT_NAME = 'SpaceMonoPL';
+  let stampFontBase64Promise = null;
+  function loadStampFontBase64() {
+    if (!stampFontBase64Promise) {
+      stampFontBase64Promise = fetch(STAMP_FONT_URL)
+        .then(r => r.blob())
+        .then(blob => new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result).split(',')[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        }))
+        .catch(() => null); // brak sieci - zostaniemy przy czcionce standardowej
+    }
+    return stampFontBase64Promise;
+  }
+
   generateBtn.dataset.mode = 'generate';
 
   // ---------- PDF generation + save ----------
@@ -1946,6 +1967,14 @@
       const keywords = filename + (selectedCategory ? `, ${selectedCategory}` : '');
       doc.setProperties({ title: nazwa, subject: opis, keywords, creator: 'Skaner dokumentów' });
 
+      const stampFontBase64 = await loadStampFontBase64();
+      let stampFont = 'courier';
+      if (stampFontBase64) {
+        doc.addFileToVFS('SpaceMonoPL.ttf', stampFontBase64);
+        doc.addFont('SpaceMonoPL.ttf', STAMP_FONT_NAME, 'normal');
+        stampFont = STAMP_FONT_NAME;
+      }
+
       const fitOneLine = (text) => {
         const lines = doc.splitTextToSize(text, availW);
         return lines.length > 1 ? lines[0].replace(/.{3}$/, '...') : lines[0];
@@ -1961,7 +1990,7 @@
         doc.setLineWidth(0.2);
         doc.line(margin, stampTop - 4, pageW - margin, stampTop - 4);
 
-        doc.setFont('courier', 'normal');
+        doc.setFont(stampFont, 'normal');
         doc.setFontSize(10.5);
         doc.setTextColor(95, 99, 104);
 
