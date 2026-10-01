@@ -104,7 +104,7 @@
     color: inherit;
     border: 1.5px dashed var(--stamp);
     border-radius: 14px;
-    padding: 22px 12px;
+    padding: 14px 12px;
     text-align: center;
     background: var(--paper-raised);
     cursor: pointer;
@@ -112,7 +112,7 @@
   }
   .capture-zone:active { background: var(--rule); }
   .capture-zone:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-  .capture-zone .icon { width: 35px; height: 35px; margin: 0 auto 9px; color: var(--ink-soft); }
+  .capture-zone .icon { width: 36px; height: 36px; margin: 0 auto 6px; color: var(--ink-soft); }
   .capture-zone .cta { font-weight: 700; font-size: 14px; margin-bottom: 3px; }
   .capture-zone .hint { font-size: 11px; color: var(--ink-faint); }
 
@@ -448,7 +448,6 @@
           <circle cx="12" cy="13" r="3.4"/>
         </svg>
         <div class="cta">Zrób zdjęcie dokumentu</div>
-        <div class="hint">Otworzy aparat telefonu</div>
       </button>
       <input type="file" id="fileInput" accept="image/*" capture="environment">
     </div>
@@ -487,7 +486,6 @@
       <input type="text" id="amountInput" inputmode="decimal" placeholder="0,00" style="flex:1;">
       <button type="button" class="secondary-btn" id="currencyToggleBtn" aria-pressed="false" style="margin-top:0; flex:0 0 84px;">PLN</button>
     </div>
-    <p class="crop-hint" style="text-align:left; margin-top:6px;">Przytrzymaj walutę, aby zmienić. Włączona (na niebiesko) doda kwotę do stopki PDF.</p>
 
     <div class="picker-panel" id="currencyPickerPanel" style="display:none;">
       <input type="text" id="currencySearchInput" placeholder="Szukaj waluty (np. EUR)" style="margin-bottom:10px;">
