@@ -777,10 +777,33 @@
 
   // kwota z pola tekstowego (akceptuje przecinek); null, gdy pusta lub niepoprawna
   function parseAmount() {
-    const num = parseFloat(amountInput.value.trim().replace(',', '.'));
+    const num = parseFloat(amountInput.value.replace(/[\s ]/g, '').replace(',', '.'));
     return isNaN(num) ? null : num;
   }
-  function formatAmount(num) { return num.toFixed(2).replace('.', ','); }
+  // 1234567.5 -> "1 234 567,50" (separator tysięcy: zwykła spacja, bezpieczna w nazwie pliku)
+  function groupThousands(intDigits) { return intDigits.replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+  function formatAmount(num) {
+    const [int, dec] = Math.abs(num).toFixed(2).split('.');
+    return (num < 0 ? '-' : '') + groupThousands(int) + ',' + dec;
+  }
+
+  // formatowanie na żywo podczas wpisywania: grupowanie tysięcy, część dziesiętna bez zmian
+  amountInput.addEventListener('input', () => {
+    const el = amountInput;
+    const raw = el.value;
+    const caret = el.selectionStart;
+    const sigBefore = raw.slice(0, caret).replace(/[^\d,.]/g, '').length; // znaczące znaki przed kursorem
+    const cleaned = raw.replace(/\./g, ',').replace(/[^\d,]/g, '');
+    const commaAt = cleaned.indexOf(',');
+    const intPart = (commaAt === -1 ? cleaned : cleaned.slice(0, commaAt)).replace(/^0+(?=\d)/, '');
+    const decPart = commaAt === -1 ? null : cleaned.slice(commaAt + 1).replace(/,/g, '').slice(0, 2);
+    const out = groupThousands(intPart) + (decPart === null ? '' : ',' + decPart);
+    if (out === raw) return;
+    el.value = out;
+    let pos = 0, seen = 0;
+    while (pos < out.length && seen < sigBefore) { if (/[\d,]/.test(out[pos])) seen++; pos++; }
+    el.setSelectionRange(pos, pos);
+  });
 
   amountInput.addEventListener('blur', () => {
     if (!amountInput.value.trim()) return;
@@ -1255,7 +1278,12 @@
 
     rows.push([row.savedAt, row.filename, row.nazwa, row.opis, row.category, row.amount, row.currency, row.pages, row.oneDriveLabel, row.oneDriveFolder]);
     const wb2 = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb2, XLSX.utils.aoa_to_sheet(rows), 'Dziennik');
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    for (let r = 1; r < rows.length; r++) { // kolumna F (Kwota): format z separatorem tysięcy
+      const cell = ws[XLSX.utils.encode_cell({ r, c: 5 })];
+      if (cell && cell.t === 'n') cell.z = '#,##0.00';
+    }
+    XLSX.utils.book_append_sheet(wb2, ws, 'Dziennik');
 
     const putRes = await graph(logUrl, {
       method: 'PUT',
@@ -2121,10 +2149,10 @@
         generateBtn.classList.add('is-done');
         generateBtn.dataset.mode = 'reset';
 
-        const rawAmount = amountInput.value.trim();
+        const amountNum = parseAmount(); // liczba (nie tekst), żeby Excel mógł ją formatować
         const logRow = {
           savedAt, filename, nazwa, opis, category: selectedCategory || '',
-          amount: rawAmount, currency: rawAmount ? getSelectedCurrency() : '',
+          amount: amountNum === null ? '' : amountNum, currency: amountNum === null ? '' : getSelectedCurrency(),
           pages: allPages.length,
           oneDriveLabel: oneDriveInfo ? oneDriveInfo.label : '',
           oneDriveFolder: oneDriveInfo ? oneDriveInfo.folder : ''
