@@ -948,7 +948,7 @@
   const statusMsg = document.getElementById('statusMsg');
 
   // ---------- dziennik zapisów (Excel) - lokalny zapas na wypadek braku logowania Microsoft ----------
-  const LOG_HEADERS = ['Data zapisu', 'Plik', 'Nazwa', 'Opis', 'Płatność', 'Kwota', 'Waluta', 'Liczba stron', 'Przycisk OneDrive', 'Folder OneDrive'];
+  const LOG_HEADERS = ['Data zapisu', 'Data', 'Plik', 'Nazwa', 'Opis', 'Płatność', 'Kwota', 'Waluta', 'Liczba stron', 'Przycisk OneDrive', 'Folder OneDrive'];
   const LOCAL_LOG_KEY = 'skanerLogEntries';
 
   const isTopLevel = (() => {
@@ -1291,6 +1291,12 @@
         const existing = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
         if (existing.length) {
           rows = existing;
+          if (rows[0][1] !== 'Data') { // starszy układ bez kolumny Data: wstaw ją jako drugą (data z nazwy pliku)
+            for (let i = 1; i < rows.length; i++) {
+              const m = /^\d{4}-\d{2}-\d{2}/.exec(String(rows[i][1] || '')) || /^\d{4}-\d{2}-\d{2}/.exec(String(rows[i][0] || ''));
+              rows[i].splice(1, 0, m ? m[0] : '');
+            }
+          }
           rows[0] = LOG_HEADERS; // starsze dzienniki nie mają kolumn OneDrive
         }
       }
@@ -1303,11 +1309,11 @@
 
   // true = zapisano; false = konflikt wersji (trzeba odczytać plik ponownie)
   async function putLogRows(rows, row, logUrl, etag) {
-    rows.push([row.savedAt, row.filename, row.nazwa, row.opis, row.category, row.amount, row.currency, row.pages, row.oneDriveLabel, row.oneDriveFolder]);
+    rows.push([row.savedAt, row.date, row.filename, row.nazwa, row.opis, row.category, row.amount, row.currency, row.pages, row.oneDriveLabel, row.oneDriveFolder]);
     const wb2 = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(rows);
-    for (let r = 1; r < rows.length; r++) { // kolumna F (Kwota): format z separatorem tysięcy
-      const cell = ws[XLSX.utils.encode_cell({ r, c: 5 })];
+    for (let r = 1; r < rows.length; r++) { // kolumna G (Kwota): format z separatorem tysięcy
+      const cell = ws[XLSX.utils.encode_cell({ r, c: 6 })];
       if (cell && cell.t === 'n') cell.z = '#,##0.00';
     }
     XLSX.utils.book_append_sheet(wb2, ws, 'Dziennik');
@@ -1412,13 +1418,18 @@
   }
 
   // ---------- date / filename ----------
+  // data używana w nazwie pliku i w kolumnie "Data" dziennika
+  function getFilenameDate(now = new Date()) {
+    const useManual = manualDateToggle.checked && /^\d{4}-\d{2}-\d{2}$/.test(manualDateInput.value);
+    return useManual
+      ? manualDateInput.value // input[type=date] daje już format yyyy-MM-dd
+      : fmtDate(now);
+  }
+
   function buildFilename() {
     const now = new Date(); // strefa czasowa telefonu, automatycznie
     const useManual = manualDateToggle.checked && /^\d{4}-\d{2}-\d{2}$/.test(manualDateInput.value);
-
-    const datePart = useManual
-      ? manualDateInput.value // input[type=date] daje już format yyyy-MM-dd
-      : fmtDate(now);
+    const datePart = getFilenameDate(now);
 
     let timePart = '';
     if (timeToggle.checked) {
@@ -2181,7 +2192,7 @@
 
         const amountNum = parseAmount(); // liczba (nie tekst), żeby Excel mógł ją formatować
         const logRow = {
-          savedAt, filename, nazwa, opis, category: selectedCategory || '',
+          savedAt, date: filename.slice(0, 10), filename, nazwa, opis, category: selectedCategory || '',
           amount: amountNum === null ? '' : amountNum, currency: amountNum === null ? '' : getSelectedCurrency(),
           pages: allPages.length,
           oneDriveLabel: oneDriveInfo ? oneDriveInfo.label : '',
