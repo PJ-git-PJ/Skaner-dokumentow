@@ -1074,7 +1074,8 @@
     } else if (contentType) {
       headers['Content-Type'] = contentType;
     }
-    return fetch(url, { method, headers, body });
+    // no-store: odczyt dziennika nie może wrócić ze starej kopii z cache przeglądarki
+    return fetch(url, { method, headers, body, cache: 'no-store' });
   }
 
   function createFolder(parentEncodedPath, name, conflictBehavior) {
