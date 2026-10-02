@@ -1064,10 +1064,10 @@
   }
 
   // fetch z tokenem; json -> wysyłany jako application/json, body + contentType -> surowe dane
-  async function graph(url, { scope = 'Files.ReadWrite', method = 'GET', json, body, contentType } = {}) {
+  async function graph(url, { scope = 'Files.ReadWrite', method = 'GET', json, body, contentType, headers: extraHeaders } = {}) {
     const token = await getMsToken([scope]);
     if (!token) throw new Error('Brak tokenu ' + scope);
-    const headers = { 'Authorization': `Bearer ${token}` };
+    const headers = { 'Authorization': `Bearer ${token}`, ...extraHeaders };
     if (json !== undefined) {
       headers['Content-Type'] = 'application/json';
       body = JSON.stringify(json);
@@ -1258,25 +1258,51 @@
   }
 
   // Dziennik .xlsx trzymany bezpośrednio w tym samym folderze OneDrive co PDF-y (odczyt-dopisz-zapis przez Graph API)
-  async function appendRowToOneDriveLog(row) {
-    await ensureOneDriveFolder();
-    const logUrl = driveUrl(oneDriveItemPath('dziennik-skanera.xlsx'), 'content');
+  // Zapisy idą jeden po drugim (kolejka), a każdy zapis jest warunkowy (If-Match z eTag odczytanej wersji).
+  // Dzięki temu równoległe skany ani edycja pliku w międzyczasie nie gubią ani nie przywracają rekordów:
+  // gdy plik zmienił się po odczycie, OneDrive odrzuca zapis (412/409), a my czytamy go od nowa i ponawiamy.
+  let oneDriveLogQueue = Promise.resolve();
+  function appendRowToOneDriveLog(row) {
+    const run = oneDriveLogQueue.then(() => appendRowToOneDriveLogOnce(row));
+    oneDriveLogQueue = run.catch(() => {});
+    return run;
+  }
 
-    let rows = [LOG_HEADERS];
-    const getRes = await graph(logUrl);
-    if (getRes.ok) {
-      try {
+  async function appendRowToOneDriveLogOnce(row) {
+    await ensureOneDriveFolder();
+    const itemPath = oneDriveItemPath('dziennik-skanera.xlsx');
+    const logUrl = driveUrl(itemPath, 'content');
+    const MAX_TRIES = 5;
+
+    for (let attempt = 1; attempt <= MAX_TRIES; attempt++) {
+      // 1) eTag PRZED treścią: jeśli plik zmieni się między krokami, zapis z tym eTag zostanie odrzucony
+      let etag = null;
+      const metaRes = await graph(driveUrl(itemPath, ''));
+      if (metaRes.ok) etag = (await metaRes.json()).eTag || null;
+      else if (metaRes.status !== 404) throw new Error('Odczyt dziennika OneDrive nieudany: ' + metaRes.status);
+
+      // 2) treść
+      let rows = [LOG_HEADERS];
+      if (etag) {
+        const getRes = await graph(logUrl);
+        if (!getRes.ok) throw new Error('Odczyt dziennika OneDrive nieudany: ' + getRes.status);
+        // błąd parsowania przerywa zapis (nie nadpisujemy istniejącego dziennika samymi nagłówkami)
         const wb = XLSX.read(await getRes.arrayBuffer(), { type: 'array' });
         const existing = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
         if (existing.length) {
           rows = existing;
           rows[0] = LOG_HEADERS; // starsze dzienniki nie mają kolumn OneDrive
         }
-      } catch (e) { /* nie udało się odczytać istniejącej treści - zaczynamy od nagłówków */ }
-    } else if (getRes.status !== 404) {
-      throw new Error('Odczyt dziennika OneDrive nieudany: ' + getRes.status);
-    }
+      }
 
+      const ok = await putLogRows(rows, row, logUrl, etag);
+      if (ok) return;
+    }
+    throw new Error('Zapis dziennika OneDrive nieudany: plik był stale zmieniany');
+  }
+
+  // true = zapisano; false = konflikt wersji (trzeba odczytać plik ponownie)
+  async function putLogRows(rows, row, logUrl, etag) {
     rows.push([row.savedAt, row.filename, row.nazwa, row.opis, row.category, row.amount, row.currency, row.pages, row.oneDriveLabel, row.oneDriveFolder]);
     const wb2 = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(rows);
@@ -1286,12 +1312,15 @@
     }
     XLSX.utils.book_append_sheet(wb2, ws, 'Dziennik');
 
-    const putRes = await graph(logUrl, {
+    const putRes = await graph(etag ? logUrl : logUrl + '?@microsoft.graph.conflictBehavior=fail', {
       method: 'PUT',
       body: XLSX.write(wb2, { type: 'array', bookType: 'xlsx' }),
-      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      headers: etag ? { 'If-Match': etag } : undefined
     });
-    if (!putRes.ok) throw new Error('Zapis dziennika OneDrive nieudany: ' + putRes.status);
+    if (putRes.ok) return true;
+    if (putRes.status === 412 || putRes.status === 409) return false;
+    throw new Error('Zapis dziennika OneDrive nieudany: ' + putRes.status);
   }
 
   function blobToBase64(blob) {
