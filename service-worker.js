@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skaner-dokumentow-v1';
+const CACHE_NAME = 'skaner-dokumentow-v2';
 const APP_SHELL = [
   './',
   './index.html',
@@ -27,6 +27,10 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
+
+  // API Microsoftu (OneDrive/Graph, logowanie) - nigdy z cache, inaczej dziennik .xlsx wraca w starej wersji
+  const host = new URL(req.url).hostname;
+  if (req.headers.has('Authorization') || /(^|\.)(microsoft\.com|microsoftonline\.com|live\.com|sharepoint\.com|1drv\.com|onedrive\.com|files\.1drv\.com)$/.test(host)) return;
 
   event.respondWith(
     caches.match(req).then((cached) => {
