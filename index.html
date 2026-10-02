@@ -530,9 +530,6 @@
       <button type="button" class="cat-btn" data-category="Karta M2M" aria-pressed="false">Karta M2M</button>
     </div>
 
-    <label style="margin-top:20px;">Zapisywanie po wygenerowaniu PDF</label>
-    <button type="button" class="secondary-btn" id="emailToggleBtn" aria-pressed="false" style="margin-top:0;">Wyślij e-mailem</button>
-    <button type="button" class="secondary-btn" id="localSaveToggleBtn" aria-pressed="true">Zapis w telefonie</button>
     <label style="margin-top:20px;">Zapis do folderów OneDrive</label>
     <div class="category-row" id="oneDriveRow" style="margin-bottom:6px;">
       <button type="button" class="cat-btn od-btn" aria-pressed="false">Folder 1</button>
@@ -542,6 +539,10 @@
     </div>
     <p class="crop-hint" id="msAccountText" style="display:none;"></p>
     <p class="crop-hint" id="oneDriveActiveFolderText" style="display:none; text-align:left; margin-top:4px;"></p>
+
+    <label style="margin-top:20px;">Zapisywanie po wygenerowaniu PDF</label>
+    <button type="button" class="secondary-btn" id="emailToggleBtn" aria-pressed="false" style="margin-top:0;">Wyślij e-mailem</button>
+    <button type="button" class="secondary-btn" id="localSaveToggleBtn" aria-pressed="true">Zapis w telefonie</button>
 
     <div class="picker-panel" id="oneDrivePickerPanel" style="display:none; margin-top:10px;">
       <p class="crop-hint" id="pickerTitleText" style="margin:0 0 4px; text-align:left; font-weight:700;"></p>
@@ -803,6 +804,9 @@
     return num === null ? null : `Kwota: ${formatAmount(num)} ${getSelectedCurrency()}`;
   }
   const timeToggle = document.getElementById('timeToggle');
+  const TIME_ENABLED_KEY = 'skanerTimeEnabled';
+  timeToggle.checked = load(TIME_ENABLED_KEY, 'true') === 'true';
+  timeToggle.addEventListener('change', () => save(TIME_ENABLED_KEY, String(timeToggle.checked)));
   const manualDateToggle = document.getElementById('manualDateToggle');
   const manualDateTimeRow = document.getElementById('manualDateTimeRow');
   const manualDateInput = document.getElementById('manualDateInput');
