@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skaner-dokumentow-v7';
+const CACHE_NAME = 'skaner-dokumentow-v9';
 const APP_SHELL = [
   './',
   './index.html',

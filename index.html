@@ -68,15 +68,6 @@
   }
   header .brand { font-family: "Space Mono", monospace; font-weight: 700; font-size: 15px; letter-spacing: 0.02em; }
   header .brand span { color: var(--stamp); }
-  header .header-right { display: flex; align-items: center; gap: 10px; }
-  .close-app-btn {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 44px; height: 44px; padding: 0;
-    border: 1px solid var(--rule); border-radius: 50%;
-    background: var(--card); color: var(--ink-soft); cursor: pointer;
-  }
-  .close-app-btn:hover { color: var(--danger); border-color: var(--danger); }
-  .close-app-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
   header .step-indicator { font-family: "Space Mono", monospace; font-size: 12px; color: var(--ink-faint); }
 
   h1 { font-size: 26px; line-height: 1.15; margin: 0 0 6px; font-weight: 800; letter-spacing: -0.01em; }
@@ -443,12 +434,7 @@
 
   <header>
     <div class="brand">SKANER<span>·</span>DOK</div>
-    <div class="header-right">
-      <div class="step-indicator" id="stepIndicator">KROK 1/3</div>
-      <button type="button" class="close-app-btn" id="closeAppBtn" aria-label="Zamknij aplikację" title="Zamknij aplikację">
-        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
-    </div>
+    <div class="step-indicator" id="stepIndicator">KROK 1/3</div>
   </header>
 
   <!-- CAPTURE + CROP (jeden krok) -->
@@ -699,10 +685,8 @@
     try { history.pushState({ appBuffer: true }, '', location.href); backArmed = true; } catch (e) { /* ignoruj */ }
   }
   armBackGesture();
-  let exiting = false;
   window.addEventListener('popstate', () => {
     backArmed = false;
-    if (exiting) return;
     if (currentStep === 'optimize') {
       showCropStep(true);
       armBackGesture();
@@ -2262,16 +2246,6 @@
       navigator.serviceWorker.register('./service-worker.js').catch(() => {});
     });
   }
-  // Zamknięcie appki: window.close() jest blokowane, gdy w historii są wpisy (a mamy bufor
-  // gestu cofania), więc awaryjnie cofamy do pierwszego wpisu i jeszcze raz - to wychodzi z PWA.
-  document.getElementById('closeAppBtn').addEventListener('click', () => {
-    exiting = true;
-    window.close();
-    setTimeout(() => {
-      if (history.length > 1) history.go(-(history.length - 1));
-      setTimeout(() => history.back(), 250);
-    }, 100);
-  });
 })();
 </script>
 </body>
