@@ -699,8 +699,10 @@
     try { history.pushState({ appBuffer: true }, '', location.href); backArmed = true; } catch (e) { /* ignoruj */ }
   }
   armBackGesture();
+  let exiting = false;
   window.addEventListener('popstate', () => {
     backArmed = false;
+    if (exiting) return;
     if (currentStep === 'optimize') {
       showCropStep(true);
       armBackGesture();
@@ -2260,8 +2262,17 @@
       navigator.serviceWorker.register('./service-worker.js').catch(() => {});
     });
   }
+  // Zamknięcie appki: window.close() jest blokowane, gdy w historii są wpisy (a mamy bufor
+  // gestu cofania), więc awaryjnie cofamy do pierwszego wpisu i jeszcze raz - to wychodzi z PWA.
+  document.getElementById('closeAppBtn').addEventListener('click', () => {
+    exiting = true;
+    window.close();
+    setTimeout(() => {
+      if (history.length > 1) history.go(-(history.length - 1));
+      setTimeout(() => history.back(), 250);
+    }, 100);
+  });
 })();
-  document.getElementById('closeAppBtn').addEventListener('click', () => window.close());
 </script>
 </body>
 </html>
